@@ -34,6 +34,7 @@ def re_charge():
     else:
         print('Invalid amount')
         re_charge()
+
 #promp first time user's to register their number
 def register_num():
     global airtime_balance
@@ -41,10 +42,19 @@ def register_num():
     time.sleep(1)
     print('Please register your sim with us')
     time.sleep(2)
-        #Creating an empty list
+    #Creating an empty list
     _list = []
-    first_name = input('Enter first name\n\t>>> ').capitalize()
-    last_name = input('Enter last name\n\t>>> ').capitalize()
+    while True:
+        first_name = input('Enter first name\n\t>>> ').capitalize()
+        if first_name:
+            break
+        print('First name is required. Please try again.')
+    while True:
+        last_name = input('Enter last name\n\t>>> ').capitalize()
+        if last_name:
+            break
+        print('Last name is required. Please try again.')
+
     try:
         re_charge()
         gen_number()
@@ -77,8 +87,25 @@ def register_num():
 
 
     except ValueError:
-        print('invalid sim registration')
+        print('Sim registration failed')
 
+def Already_user():
+    phone_number = input('Enter phone number')
+
+    try:
+        #Query to check if number already exist's in db
+        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+        my_cur.execute(check_num,(phone_number))
+        user = my_cur.fetchone()
+
+        if user:
+            print('Welcome to our service')
+
+        else:
+            print('Invalid number\nPlease register your number to continue this process')
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 
 #Function to ask a user if they already have their number registered to the db or not
@@ -86,7 +113,7 @@ def option():
     print('Welcome to our service\nWould you like to:')
     time.sleep(1)
     opt = input('1. Register number\n'
-                '2. Enter number\n\t'
+                '2. User\n\t'
                 '>>> '
                 )
     if opt == '1':
@@ -95,3 +122,4 @@ def option():
 
     elif opt == '2':
         print('gg')
+option()
