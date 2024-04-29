@@ -1,7 +1,7 @@
 import pymysql as sql
 import random
 import time
-import sys
+# import sys
 
 db = sql.connect(
     user='vicjnr',
