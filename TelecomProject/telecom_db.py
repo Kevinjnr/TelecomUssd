@@ -1,6 +1,7 @@
 import pymysql as sql
 import random
 import time
+from telussd import ussd_code
 # import sys
 
 db = sql.connect(
@@ -83,14 +84,16 @@ def register_num():
         my_cur.close()
         db.close()
 
-        return 'success'
+        time.sleep(2)
+        print('Welcome to our service')
+        return ussd_code()
 
 
     except ValueError:
         print('Sim registration failed')
 
-def Already_user():
-    phone_number = input('Enter phone number')
+def already_user():
+    phone_number = input('Enter phone number\n\t>>> ')
 
     try:
         #Query to check if number already exist's in db
@@ -100,6 +103,7 @@ def Already_user():
 
         if user:
             print('Welcome to our service')
+            ussd_code()
 
         else:
             print('Invalid number\nPlease register your number to continue this process')
@@ -121,5 +125,5 @@ def option():
         register_num()
 
     elif opt == '2':
-        print('gg')
+        already_user()
 option()
