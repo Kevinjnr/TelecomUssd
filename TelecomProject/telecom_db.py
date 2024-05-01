@@ -1,8 +1,9 @@
 import pymysql as sql
 import random
 import time
-from telussd import ussd_code
-# import sys
+from telussd import *
+import sys
+import os
 
 db = sql.connect(
     user='vicjnr',
@@ -13,8 +14,8 @@ db = sql.connect(
 
 my_cur = db.cursor()
 
-#Error handlingd
-# try:
+#Error handling
+
 phone_number = ''
 airtime_balance = ''
 
@@ -49,13 +50,18 @@ def register_num():
         first_name = input('Enter first name\n\t>>> ').capitalize()
         if first_name:
             break
+        time.sleep(0.5)
         print('First name is required. Please try again.')
+        time.sleep(1)
     while True:
         last_name = input('Enter last name\n\t>>> ').capitalize()
         if last_name:
             break
+        time.sleep(0.5)
         print('Last name is required. Please try again.')
+        time.sleep(1)
 
+    #Error handling
     try:
         re_charge()
         gen_number()
@@ -67,6 +73,7 @@ def register_num():
         full_name = sp_details[0] +' '+ sp_details[1]
         # print(full_name)
         # print(sp_details)
+        wait_and_count()
         time.sleep(1)
         print('Registration successful')
         time.sleep(2)
@@ -86,12 +93,14 @@ def register_num():
 
         time.sleep(2)
         print('Welcome to our service')
+        time.sleep(1)
         return ussd_code()
 
 
     except ValueError:
         print('Sim registration failed')
 
+#Function for if user is already registered
 def already_user():
     phone_number = input('Enter phone number\n\t>>> ')
 
@@ -100,13 +109,31 @@ def already_user():
         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
         my_cur.execute(check_num,(phone_number))
         user = my_cur.fetchone()
+        #If user is already in the db the code proceed's to show ussd
+        while True:
+            if user:
+                wait()
+                print('1. Continue')
+                print('2. Cancel')
+                res = input('\t>>> ')
+                if res == '1' and res.isnumeric():
+                    wait_and_count()
+                    print('Welcome to our service')
+                    wait()
+                    ussd_code()
+                    break
 
-        if user:
-            print('Welcome to our service')
-            ussd_code()
+                elif res == '2' and res.isnumeric():
+                    print('Thank you for using our service')
+                    break
 
-        else:
-            print('Invalid number\nPlease register your number to continue this process')
+                else:
+                    print('Invalid response. Please try again')
+
+
+            else:
+                print('Invalid number\nPlease register your number to continue this process')
+                break
 
     except Exception as e:
         print(f"An error occurred: {e}")
@@ -114,16 +141,21 @@ def already_user():
 
 #Function to ask a user if they already have their number registered to the db or not
 def option():
-    print('Welcome to our service\nWould you like to:')
+    print('Welcome to our service')
     time.sleep(1)
-    opt = input('1. Register number\n'
-                '2. User\n\t'
-                '>>> '
+    print('Would you like to:')
+    time.sleep(1)
+    print('1. Register number')
+    time.sleep(0.8)
+    print('2. User')
+    opt = input('\t>>> '
                 )
     if opt == '1':
-        time.sleep(0.5)
+        wait()
+        time.sleep(1)
         register_num()
 
     elif opt == '2':
+        wait()
         already_user()
 option()
