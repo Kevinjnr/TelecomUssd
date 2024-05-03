@@ -44,8 +44,15 @@ def invalid():
     print('Invalid Phone number.')
 
 #db code for transaction
-def buyData(phone_number,data_amount,cost):
+def buyData(phone_number,data_amount,cost,valid_days=1):
     while True:
+        if data_amount >= 1000:
+            # Convert to gigabytes (GB) with one decimal place
+            bundle_size = f"{data_amount / 1000:.1f}GB"
+        else:
+            # Keep in megabytes (MB)
+            bundle_size = f"{data_amount}MB"
+
         # query to select airtime bal
         sel_balance = 'SELECT Airtime_balance,Data_balance from Telecom_tbl WHERE Phone_number =%s'
         my_cur.execute(sel_balance, (phone_number,))
@@ -55,6 +62,12 @@ def buyData(phone_number,data_amount,cost):
             current_balance = result[0]
             current_data_bal = result[1]
             if current_balance >= cost:
+
+                # Print message
+                wait()
+                print(f"You have been credited with {bundle_size} @ ₦{cost} valid for {valid_days} day(s).")
+                time.sleep(3)
+                clear()
 
                 # Deduct from bal
                 new_balance = current_balance - cost
@@ -71,6 +84,7 @@ def buyData(phone_number,data_amount,cost):
                 break
 
             else:
+                wait()
                 print('Insufficient Airtime balance.')
                 break
 
@@ -106,52 +120,19 @@ def whatsapp():
                     if user:
                         data_amount = 50
                         cost = 25
-                        wait()
-                        print(f"You have been credited with {data_amount}mb @ ₦{cost} valid for 24hours.")
-                        time.sleep(3)
+
+                        buyData(phone_number,data_amount,cost)
+                        db.commit()
+
+                        print(end='\r')
+                        print(end='\r')
+                        time.sleep(1)
                         clear()
-
-                        #Query to select current balance from db
-                        sel_balance = 'SELECT Airtime_balance,Data_balance from Telecom_tbl WHERE Phone_number =%s'
-                        my_cur.execute(sel_balance,(phone_number,))
-                        result = my_cur.fetchone()
-
-                        #Check if bal is sufficient
-                        if result is not None:
-                            current_balance = result[0]
-                            current_data_bal = result[1]
-                            if current_balance >= cost:
-
-                                #Deduct from current bal
-                                new_balance = current_balance - 25
-
-                                #Add to data bal
-                                new_data_bal = current_data_bal + data_amount
-
-                                #Query to update bal
-                                update_bal = 'UPDATE Telecom_tbl SET Airtime_balance = %s, Data_balance = %s WHERE Phone_number = %s'
-                                my_cur.execute(update_bal, (new_balance,new_data_bal, phone_number))
-
-                                #commit change
-                                db.commit()
-                                break
-
-                            else:
-                                print('Insufficient Airtime balance. Please recharge and try again')
-                                print(end='\r')
-                                print(end='\r')
-                                time.sleep(1)
-                                clear()
-
-
-                                break
-
-                        else:
-                            print('Error: No results returned from query')
-                            break
+                        break
 
                     else:
-                        print('Invalid number. Please try again')
+                        invalid()
+                        break
 
                 elif ans == '2':
                     wait_and_count()
@@ -161,45 +142,20 @@ def whatsapp():
                     if user:
                         data_amount = 100
                         cost = 50
-                        print(f"You have been credited with {data_amount}mb @ ₦{cost} valid for 7 days.")
-                        time.sleep(3)
+                        valid_days = 7
+
+                        buyData(phone_number,data_amount, cost, valid_days)
+                        db.commit()
+
+                        print(end='\r')
+                        print(end='\r')
+                        time.sleep(1)
                         clear()
+                        break
 
-                        # Query to select current balance from db
-                        sel_balance = 'SELECT Airtime_balance,Data_balance from Telecom_tbl WHERE Phone_number =%s'
-                        my_cur.execute(sel_balance, (phone_number,))
-                        result = my_cur.fetchone()
-
-                        # Check if bal is sufficient
-                        if result is not None:
-                            current_balance = result[0]
-                            current_data_bal = result[1]
-                            if current_balance >= cost:
-
-                                # Deduct from current bal
-                                new_balance = current_balance - cost
-
-                                # Add to data bal
-                                new_data_bal = current_data_bal + data_amount
-
-                                # Query to update bal
-                                update_bal = 'UPDATE Telecom_tbl SET Airtime_balance = %s, Data_balance = %s WHERE Phone_number = %s'
-                                my_cur.execute(update_bal, (new_balance, new_data_bal, phone_number))
-
-                                # commit change
-                                db.commit()
-                                break
-
-                            else:
-                                print('Insufficient Airtime balance. Please recharge and try again')
-                                print(end='\r')
-                                print(end='\r')
-                                time.sleep(1)
-                                clear()
-                                break
-
-                        else:
-                            print('Error: No results returned from query')
+                    else:
+                        invalid()
+                        break
 
                 elif ans == '3':
                     wait_and_count()
@@ -209,51 +165,25 @@ def whatsapp():
                     if user:
                         data_amount = 200
                         cost = 150
-                        print(f"You have been credited with {data_amount}mb  @ N{cost} valid for 30days.")
-                        time.sleep(3)
+                        valid_days = 30
+
+                        buyData(phone_number, data_amount, cost, valid_days)
+                        db.commit()
+
+                        print(end='\r')
+                        print(end='\r')
+                        time.sleep(1)
                         clear()
-
-                        #query to select airtime bal
-                        sel_balance = 'SELECT Airtime_balance,Data_balance from Telecom_tbl WHERE Phone_number =%s'
-                        my_cur.execute(sel_balance, (phone_number,))
-                        result = my_cur.fetchone()
-
-                        if result is not None:
-                            current_balance = result[0]
-                            current_data_bal = result[1]
-                            if current_balance >= cost:
-
-                                #Deduct from bal
-                                new_balance = current_balance - cost
-
-                                # Add to data bal
-                                new_data_bal = current_data_bal + data_amount
-
-                                # Query to update bal
-                                update_bal = 'UPDATE Telecom_tbl SET Airtime_balance = %s, Data_balance = %s WHERE Phone_number = %s'
-                                my_cur.execute(update_bal, (new_balance, new_data_bal, phone_number))
-
-                                #Commit change
-                                db.commit()
-                                break
-
-                            else:
-                                print('Insufficient Airtime balance.')
-                                print(end='\r')
-                                print(end='\r')
-                                clear()
-                                break
-
-                        else:
-                            print('Error: No query returned')
-                            break
+                        break
 
                     else:
-                        return 'Invalid Phone number'
+                        invalid()
+                        break
 
                 else:
                     print("Invalid character. Please try again")
                     whatsapp()
+
         clear()
         print(end='\r')
         print(end='\r')
@@ -282,11 +212,8 @@ def facebook():
                 if user:
                     data_amount = 50
                     cost = 25
-                    print(f"You have been credited with {data_amount}MB @ ₦{cost} valid for 24hours.")
-                    time.sleep(3)
-                    clear()
 
-                    buyData(phone_number,50,25)
+                    buyData(phone_number,data_amount,cost)
                     db.commit()
 
                     print(end='\r')
@@ -307,11 +234,9 @@ def facebook():
                 if user:
                     data_amount = 100
                     cost = 50
-                    print(f"You have been credited with {data_amount}MB @ ₦{cost} valid for 7 days.")
-                    time.sleep(3)
-                    clear()
+                    days = 7
 
-                    buyData(phone_number,100,50)
+                    buyData(phone_number,data_amount,cost,days)
                     db.commit()
 
                     print(end='\r')
@@ -331,11 +256,9 @@ def facebook():
                 if user:
                     data_amount = 250
                     cost = 100
-                    print(f"You have been credited with {data_amount}MB  @ N{cost} valid for 30days.")
-                    time.sleep(3)
-                    clear()
+                    days = 30
 
-                    buyData(phone_number,data_amount,cost)
+                    buyData(phone_number,data_amount,cost,days)
                     db.commit()
 
                     print(end='\r')
@@ -349,6 +272,7 @@ def facebook():
 
             else:
                 print("Invalid character")
+
         clear()
         print(end='\r')
         print(end='\r')
@@ -378,9 +302,6 @@ def instagram():
                 if user:
                     data_amount = 250
                     cost = 100
-                    print(f"You have been credited with {data_amount}MB @ ₦{cost} valid for 24hours.")
-                    time.sleep(3)
-                    clear()
 
                     buyData(phone_number,data_amount,cost)
                     db.commit()
@@ -403,11 +324,9 @@ def instagram():
                 if user:
                     data_amount = 350
                     cost = 150
-                    print(f"You have been credited with {data_amount}MB @ ₦{cost} valid for 2 days.")
-                    time.sleep(3)
-                    clear()
+                    days = 2
 
-                    buyData(phone_number,data_amount,cost)
+                    buyData(phone_number,data_amount,cost,days)
                     db.commit()
 
                     print(end='\r')
@@ -427,9 +346,6 @@ def instagram():
                 if user:
                     data_amount = 1000
                     cost = 200
-                    print("You have been credited with 1G @ N200 valid for 24hours.")
-                    time.sleep(3)
-                    clear()
 
                     buyData(phone_number,data_amount,cost)
                     db.commit()
@@ -451,11 +367,9 @@ def instagram():
                 if user:
                     data_amount = 1500
                     cost = 200
-                    print("You have been credited with 1.5GB @ ₦200 valid for 3 days.")
-                    time.sleep(3)
-                    clear()
+                    days = 3
 
-                    buyData(phone_number,data_amount,cost)
+                    buyData(phone_number,data_amount,cost,days)
                     db.commit()
 
                     print(end='\r')
@@ -502,9 +416,6 @@ def tiktok():
                 if user:
                     data_amount = 200
                     cost = 100
-                    print("You have been credited with 200MB @ ₦100 valid for 24hours.")
-                    time.sleep(3)
-                    clear()
 
                     buyData(phone_number,data_amount,cost)
                     db.commit()
@@ -519,7 +430,7 @@ def tiktok():
                     invalid()
                     break
 
-            elif ans == 2:
+            elif ans == '2':
                 wait_and_count()
                 phone_number = input('Please enter phone number again to continue\n\t>>> ')
                 check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
@@ -529,11 +440,9 @@ def tiktok():
                 if user:
                     data_amount = 350
                     cost = 150
-                    print("You have been credited with 350MB @ ₦150 valid for 2 days.")
-                    time.sleep(3)
-                    clear()
+                    days = 2
 
-                    buyData(phone_number,data_amount,cost)
+                    buyData(phone_number,data_amount,cost,days)
                     db.commit()
 
                     print(end='\r')
@@ -545,7 +454,7 @@ def tiktok():
                     invalid()
                     break
 
-            elif ans == 3:
+            elif ans == '3':
                 wait_and_count()
                 phone_number = input('Please enter phone number again to continue\n\t>>> ')
                 check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
@@ -555,9 +464,6 @@ def tiktok():
                 if user:
                     data_amount = 1000
                     cost = 200
-                    print("You have been credited with 1GB @ N200 valid for 24hours.")
-                    time.sleep(3)
-                    clear()
 
                     buyData(phone_number,data_amount,cost)
                     db.commit()
@@ -571,7 +477,7 @@ def tiktok():
                     invalid()
                     break
 
-            elif ans == 4:
+            elif ans == '4':
                 wait_and_count()
                 phone_number = input('Please enter phone number again to continue\n\t>>> ')
                 check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
@@ -581,11 +487,9 @@ def tiktok():
                 if user:
                     data_amount = 1500
                     cost = 250
-                    print("You have been credited with 1.5GB @ ₦250 valid for 3 days.")
-                    time.sleep(3)
-                    clear()
+                    days = 3
 
-                    buyData(phone_number,data_amount,cost)
+                    buyData(phone_number,data_amount,cost,days)
                     db.commit()
 
                     print(end='\r')
@@ -629,9 +533,6 @@ def all_social_bundles():
                 if user:
                     data_amount = 150
                     cost = 50
-                    print("You have been credited with 150mb @ ₦50 valid for 24hours.")
-                    time.sleep(3)
-                    clear()
 
                     buyData(phone_number,data_amount,cost)
                     db.commit()
@@ -656,11 +557,9 @@ def all_social_bundles():
                 if user:
                     data_amount = 350
                     cost = 100
-                    print("You have been credited with 350mb @ ₦100 valid for 7 days.")
-                    time.sleep(3)
-                    clear()
+                    days = 7
 
-                    buyData(phone_number,data_amount,cost)
+                    buyData(phone_number,data_amount,cost,days)
                     db.commit()
 
                     print(end='\r')
@@ -682,11 +581,9 @@ def all_social_bundles():
                 if user:
                     data_amount = 1000
                     cost = 250
-                    print("You have been credited with 1G @ N250 valid for 7 days.")
-                    time.sleep(3)
-                    clear()
+                    days = 7
 
-                    buyData(phone_number,data_amount,cost)
+                    buyData(phone_number,data_amount,cost,days)
                     db.commit()
 
                     print(end='\r')
@@ -727,9 +624,6 @@ def yit():
                 if user:
                     data_amount = 150
                     cost = 50
-                    print("You have been credited with 150MB @ ₦50 valid for 24hours.")
-                    time.sleep(3)
-                    clear()
 
                     buyData(phone_number,data_amount,cost)
                     db.commit()
@@ -777,9 +671,6 @@ def operamini_and_news():
                 if user:
                     data_amount = 50
                     cost = 20
-                    print("You have been credited with 50MB @ ₦20 valid for 24hours.")
-                    time.sleep(3)
-                    clear()
 
                     buyData(phone_number,data_amount,cost)
                     db.commit()
@@ -804,11 +695,9 @@ def operamini_and_news():
                 if user:
                     data_amount = 100
                     cost = 50
-                    print("You have been credited with 100MB @ ₦50 valid for 24hours.")
-                    time.sleep(3)
-                    clear()
+                    days = 7
 
-                    buyData(phone_number, data_amount, cost)
+                    buyData(phone_number, data_amount, cost,days)
                     db.commit()
 
                     print(end='\r')
@@ -831,11 +720,9 @@ def operamini_and_news():
                 if user:
                     data_amount = 500
                     cost = 250
-                    print("You have been credited with 500MB @ ₦250 valid for 24hours.")
-                    time.sleep(3)
-                    clear()
+                    days = 30
 
-                    buyData(phone_number, data_amount, cost)
+                    buyData(phone_number, data_amount, cost,days)
                     db.commit()
 
                     print(end='\r')
@@ -880,11 +767,9 @@ def social_mega_bundles():
                 if user:
                     data_amount = 750
                     cost = 200
-                    print("You have been credited with 750MB @ ₦200 valid for 24hours.")
-                    time.sleep(3)
-                    clear()
+                    days = 3
 
-                    buyData(phone_number, data_amount, cost)
+                    buyData(phone_number, data_amount, cost,days)
                     db.commit()
 
                     print(end='\r')
@@ -907,11 +792,10 @@ def social_mega_bundles():
                 if user:
                     data_amount = 1000
                     cost = 300
-                    print("You have been credited with 1GB @ ₦300 valid for 24hours.")
-                    time.sleep(3)
-                    clear()
+                    days = 7
+                    wait()
 
-                    buyData(phone_number, data_amount, cost)
+                    buyData(phone_number, data_amount, cost,days)
                     db.commit()
 
                     print(end='\r')
