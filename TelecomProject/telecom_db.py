@@ -2,8 +2,7 @@ import pymysql as sql
 import random
 import time
 from telussd import *
-import sys
-import os
+
 
 db = sql.connect(
     user='vicjnr',
@@ -24,7 +23,7 @@ def gen_number():
     global phone_number
     fnum = '080'
 
-    last_num = ''.join([str(random.randint(0, 9)) for _ in range(8)])
+    last_num = ''.join([str(random.randint(0, 9)) for _ in range(8)]).strip()
     phone_number = fnum + last_num
     return phone_number
 
@@ -47,14 +46,14 @@ def register_num():
     #Creating an empty list
     _list = []
     while True:
-        first_name = input('Enter first name\n\t>>> ').capitalize()
+        first_name = str(input('Enter first name\n\t>>> ')).capitalize().isalpha()
         if first_name:
             break
         time.sleep(0.5)
         print('First name is required. Please try again.')
         time.sleep(1)
     while True:
-        last_name = input('Enter last name\n\t>>> ').capitalize()
+        last_name = str(input('Enter last name\n\t>>> ')).capitalize().isalpha()
         if last_name:
             break
         time.sleep(0.5)
@@ -109,6 +108,7 @@ def already_user():
         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
         my_cur.execute(check_num,(phone_number))
         user = my_cur.fetchone()
+
         #If user is already in the db the code proceed's to show ussd
         while True:
             if user:
@@ -148,14 +148,22 @@ def option():
     print('1. Register number')
     time.sleep(0.8)
     print('2. User')
-    opt = input('\t>>> '
-                )
-    if opt == '1':
-        wait()
-        time.sleep(1)
-        register_num()
 
-    elif opt == '2':
-        wait()
-        already_user()
+    while True:
+        opt = input('\t>>> ')
+        if opt == '1' and opt.isnumeric():
+            wait()
+            time.sleep(1)
+            register_num()
+            break
+
+        elif opt == '2' and opt.isnumeric():
+            wait()
+            already_user()
+            break
+
+        else:
+            time.sleep(1)
+            print('Invalid Response. Please try again')
+            time.sleep(0.5)
 option()
