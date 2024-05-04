@@ -29,11 +29,11 @@ def gen_number():
 
 def re_charge():
     global airtime_balance
-    airtime_balance = (input('Enter amount to recharge\n\t>>> '))
+    airtime_balance = input('Enter amount to recharge\n\t>>> ')
     if airtime_balance.isnumeric():
         pass
     else:
-        print('Invalid amount')
+        print('Invalid Entry. Please enter a numeric value')
         re_charge()
 
 #promp first time user's to register their number
@@ -46,18 +46,18 @@ def register_num():
     #Creating an empty list
     _list = []
     while True:
-        first_name = str(input('Enter first name\n\t>>> ')).capitalize().isalpha()
-        if first_name:
+        first_name = str(input('Enter first name\n\t>>> ')).capitalize()
+        if first_name.isalpha():
             break
         time.sleep(0.5)
-        print('First name is required. Please try again.')
+        print('First name is required and must contain only alphabetic characters. Please try again.')
         time.sleep(1)
     while True:
-        last_name = str(input('Enter last name\n\t>>> ')).capitalize().isalpha()
-        if last_name:
+        last_name = str(input('Enter last name\n\t>>> ')).capitalize()
+        if last_name.isalpha():
             break
         time.sleep(0.5)
-        print('Last name is required. Please try again.')
+        print('Last name is required and must contain only alphabetic characters. Please try again.')
         time.sleep(1)
 
     #Error handling
@@ -96,7 +96,7 @@ def register_num():
         return ussd_code()
 
 
-    except ValueError:
+    except Exception:
         print('Sim registration failed')
 
 #Function for if user is already registered

@@ -956,7 +956,7 @@ def ussd_code():
         print('Invalid ussd\nTry again\n')
 
         ussd_code()
-ussd_code()
+# ussd_code()
 
 
 
