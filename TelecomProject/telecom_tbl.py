@@ -17,8 +17,10 @@ cre_tbl = '''
         Phone_number varchar(11) not null unique,
         Airtime_balance decimal(15,2) not null,
         Data_balance decimal(15,2) not null,
+        Talk_time_balance decimal(15,2) not null
         Airtime_borrowed_balance decimal(15,2) not null,
-        Data_borrowed_balance decimal(15,2) not null
+        Data_borrowed_balance decimal(15,2) not null,
+        Data_expires DATE
         )
 '''
 

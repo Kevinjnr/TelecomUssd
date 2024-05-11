@@ -1,10 +1,10 @@
-import pymysql as sql
 import random
 import time
+
 from telussd import *
 
 
-db = sql.connect(
+db = pymysql.connect(
     user='vicjnr',
     password='kevjnr7890',
     host='localhost',
@@ -13,32 +13,36 @@ db = sql.connect(
 
 my_cur = db.cursor()
 
-#Error handling
-
 phone_number = ''
 airtime_balance = ''
 
-    #Generate user phone number
+
+# Generate user phone number
 def gen_number():
     global phone_number
-    fnum = '080'
+    fnum = random.choice(['080','070','090','081'])
 
     last_num = ''.join([str(random.randint(0, 9)) for _ in range(8)]).strip()
     phone_number = fnum + last_num
     return phone_number
 
+
 def re_charge():
     global airtime_balance
+    print('~' * 50)
     airtime_balance = input('Enter amount to recharge\n\t>>> ')
     if airtime_balance.isnumeric():
         pass
     else:
+        print('~' * 50)
         print('Invalid Entry. Please enter a numeric value')
         re_charge()
 
-#promp first time user's to register their number
+
+# prompt first time user's to register their number
 def register_num():
     global airtime_balance
+    print('~' * 50)
     print('Welcome!')
     time.sleep(1)
     print('Please register your sim with us')
@@ -46,17 +50,21 @@ def register_num():
     #Creating an empty list
     _list = []
     while True:
+        print('~' * 50)
         first_name = str(input('Enter first name\n\t>>> ')).capitalize()
         if first_name.isalpha():
             break
         time.sleep(0.5)
+        print('~' * 50)
         print('First name is required and must contain only alphabetic characters. Please try again.')
         time.sleep(1)
     while True:
+        print('~' * 50)
         last_name = str(input('Enter last name\n\t>>> ')).capitalize()
         if last_name.isalpha():
             break
         time.sleep(0.5)
+        print('~' * 50)
         print('Last name is required and must contain only alphabetic characters. Please try again.')
         time.sleep(1)
 
@@ -74,6 +82,7 @@ def register_num():
         # print(sp_details)
         wait_and_count()
         time.sleep(1)
+        print('~' * 50)
         print('Registration successful')
         time.sleep(2)
         print(f'Full name: {full_name}\nPhone number: {sp_details[-1]}')
@@ -91,16 +100,19 @@ def register_num():
         db.close()
 
         time.sleep(2)
+        print('~' * 50)
         print('Welcome to our service')
         time.sleep(1)
         return ussd_code()
 
-
     except Exception:
+        print('~' * 50)
         print('Sim registration failed')
 
-#Function for if user is already registered
+
+# Function for if user is already registered
 def already_user():
+    print('~' * 50)
     phone_number = input('Enter phone number\n\t>>> ')
 
     try:
@@ -113,34 +125,43 @@ def already_user():
         while True:
             if user:
                 wait()
+                print('~' * 50)
                 print('1. Continue')
                 print('2. Cancel')
+                print('~' * 50)
                 res = input('\t>>> ')
                 if res == '1' and res.isnumeric():
                     wait_and_count()
+                    print('~' * 50)
                     print('Welcome to our service')
                     wait()
                     ussd_code()
                     break
 
                 elif res == '2' and res.isnumeric():
+                    print('~' * 50)
                     print('Thank you for using our service')
                     break
 
                 else:
+                    print('~' * 50)
                     print('Invalid response. Please try again')
-
+                    time.sleep(0.5)
+                    print('Service time out')
 
             else:
+                print('~' * 50)
                 print('Invalid number\nPlease register your number to continue this process')
                 break
 
     except Exception as e:
+        print('~' * 50)
         print(f"An error occurred: {e}")
 
 
-#Function to ask a user if they already have their number registered to the db or not
+# Function to ask a user if they already have their number registered to the db or not
 def option():
+    print('~' * 50)
     print('Welcome to our service')
     time.sleep(1)
     print('Would you like to:')
@@ -150,6 +171,7 @@ def option():
     print('2. User')
 
     while True:
+        print('~' * 50)
         opt = input('\t>>> ')
         if opt == '1' and opt.isnumeric():
             wait()
@@ -164,6 +186,9 @@ def option():
 
         else:
             time.sleep(1)
+            print('~' * 50)
             print('Invalid Response. Please try again')
             time.sleep(0.5)
+
+
 option()
