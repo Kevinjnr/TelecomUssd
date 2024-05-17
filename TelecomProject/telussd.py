@@ -99,7 +99,6 @@ def recharge():
                             print('~' * 50)
                             print(f'The recharge of N{amount} was successful\nAcct.bal N{amount}')
 
-
                             sel_bal = 'SELECT Airtime_borrowed_balance FROM Telecom_tbl WHERE Phone_number = %s'
                             my_cur.execute(sel_bal, (phone_number,))
                             result = my_cur.fetchone()
@@ -124,11 +123,17 @@ def recharge():
                                     pass
                                     break
 
+                            else:
+                                print('~'*50)
+                                time.sleep(0.6)
+                                print('No query returned')
+
                         else:
                             invalid()
                             break
 
                     else:
+                        print('~'*50)
                         time.sleep(0.8)
                         print('Amount must be more than N30')
 
@@ -230,7 +235,37 @@ def buyData(phone_number, data_amount=0, cost=0, valid_days=1):
 
                             # Commit changes
                             db.commit()
-                            break
+
+
+                            sel_bal = 'SELECT Data_borrowed_balance FROM Telecom_tbl WHERE Phone_number = %s'
+                            my_cur.execute(sel_bal, (phone_number,))
+                            result = my_cur.fetchone()
+
+                            if result is not None:
+                                borrow_bal = result[0]
+
+                                if borrow_bal != 0:
+                                    rate = Decimal('0.15')
+                                    interest = rate * Decimal(borrow_bal)
+                                    new_bal = new_data_bal - borrow_bal - interest
+
+                                    update_bal = 'UPDATE Telecom_tbl SET Data_balance = %s,Data_borrowed_balance=0 WHERE Phone_number = %s'
+                                    my_cur.execute(update_bal, (new_bal, phone_number))
+
+                                    db.commit()
+
+                                    print(f'{borrow_bal}MB deducted from account')
+                                    break
+
+                                else:
+                                    pass
+                                    break
+
+                            else:
+                                print('~' * 50)
+                                time.sleep(0.6)
+                                print('No query returned')
+                                break
 
                         except Exception as e:
                             print('~' * 50)
@@ -316,7 +351,36 @@ def buyDataTalk(phone_number, data_amount=0, cost=0, talk_time=0, valid_days=1):
 
                         # Commit change
                         db.commit()
-                        break
+
+                        sel_bal = 'SELECT Data_borrowed_balance FROM Telecom_tbl WHERE Phone_number = %s'
+                        my_cur.execute(sel_bal, (phone_number,))
+                        result = my_cur.fetchone()
+
+                        if result is not None:
+                            borrow_bal = result[0]
+
+                            if borrow_bal != 0:
+                                rate = Decimal('0.15')
+                                interest = rate * Decimal(borrow_bal)
+                                new_bal = new_data_bal - borrow_bal - interest
+
+                                update_bal = 'UPDATE Telecom_tbl SET Data_balance = %s,Data_borrowed_balance=0 WHERE Phone_number = %s'
+                                my_cur.execute(update_bal, (new_bal, phone_number))
+
+                                db.commit()
+
+                                print(f'{borrow_bal}MB deducted from account')
+                                break
+
+                            else:
+                                pass
+                                break
+
+                        else:
+                            print('~' * 50)
+                            time.sleep(0.6)
+                            print('No query returned')
+                            break
 
                     except Exception as e:
                         print('~' * 50)
@@ -507,16 +571,21 @@ def borrow_air(phone_number,amount):
                 if result is not None:
                     borrow_bal = result[0]
 
-                    new_borrow_bal = borrow_bal + amount
+                    if borrow_bal <= 3000:
+                        pass
 
-                    update_bal = 'UPDATE Telecom_tbl SET Airtime_borrowed_balance = % s Where Phone_number = %s'
-                    my_cur.execute(update_bal,(new_borrow_bal,phone_number))
+                        new_borrow_bal = borrow_bal + amount
 
-                    db.commit()
+                        update_bal = 'UPDATE Telecom_tbl SET Airtime_borrowed_balance = % s Where Phone_number = %s'
+                        my_cur.execute(update_bal,(new_borrow_bal,phone_number))
 
-                    wait_and_count()
-                    print(f"\033[34;1mY'ello! you have been credited with N{amount} ")
+                        db.commit()
 
+                        wait_and_count()
+                        print(f"\033[34;1mY'ello! you have been credited with N{amount} ")
+
+                    else:
+                        print(f'Pay outstanding debt to continue this process N{borrow_bal}')
                 else:
                     print('~' * 50)
                     print('No query returned')
@@ -558,21 +627,33 @@ def borrow_mydata(phone_number,data_amount):
                 if result is not None:
                     borrow_bal = result[0]
 
-                    new_borrow_bal = data_amount + borrow_bal
+                    if borrow_bal <= 1000:
+                        pass
 
-                    update_bal = 'UPDATE Telecom_tbl SET Data_borrowed_balance = % s Where Phone_number = %s'
-                    my_cur.execute(update_bal, (new_borrow_bal, phone_number))
+                        new_borrow_bal = data_amount + borrow_bal
 
-                    db.commit()
+                        update_bal = 'UPDATE Telecom_tbl SET Data_borrowed_balance = % s Where Phone_number = %s'
+                        my_cur.execute(update_bal, (new_borrow_bal, phone_number))
 
-                    wait_and_count()
-                    print(f"\033[34;1mY'ello! you have been credited with {data_amount} ")
+                        db.commit()
 
+                        wait_and_count()
+                        print(f"\033[34;1mY'ello! you have been credited with {bundle_size} ")
+
+                    else:
+                        print(f'Pay outstanding debt to continue this process {borrow_bal}MB')
+
+                else:
+                    print('~'*50)
+                    print('No query returned')
             else:
+                print('~'*50)
                 print("\t\t\033[34mY'ello! you are qualified, but your airtime balance is low. You can borrow airtime or\n\t\tdata when your balance is lower than N49.99 ")
 
         else:
+            print('~'*50)
             print('No query returned')
+
     except Exception as e:
         print('An error occurred: ', e)
 
@@ -2163,6 +2244,8 @@ def borrow_airtime():
     try:
         wait()
         print('~'*50)
+        print('\t\t\033[34mBorrow Airtime')
+        time.sleep(0.6)
         print('\033[34m1. N50 ')
         time.sleep(0.6)
         print('\033[34m2. N100 ')
@@ -2230,7 +2313,69 @@ def borrow_airtime():
 # Borrow data
 def borrow_data():
     try:
-        pass
+        wait()
+        print('~' * 50)
+        print('\033[32mBorrow Data')
+        time.sleep(0.6)
+        print('\033[32m1. 100MB ')
+        time.sleep(0.6)
+        print('\033[32m2. 150MB ')
+        time.sleep(0.6)
+        print('\033[32m3. 500MB')
+        time.sleep(0.6)
+        print('~' * 50)
+        opt = input('\t> ')
+
+        if opt == '1':
+            wait()
+            phone_number = input('Please enter phone number again to continue\n\t>>> ')
+            check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+            user = my_cur.execute(check_num, (phone_number))
+
+            # check if user is in db
+            if user:
+                data_amount = 100
+
+                borrow_mydata(phone_number, data_amount)
+                db.commit()
+
+            else:
+                invalid()
+
+        elif opt == '2':
+            wait()
+            phone_number = input('Please enter phone number again to continue\n\t>>> ')
+            check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+            user = my_cur.execute(check_num, (phone_number))
+
+            # check if user is in db
+            if user:
+                data_amount = 150
+
+                borrow_mydata(phone_number, data_amount)
+                db.commit()
+
+            else:
+                invalid()
+
+        elif opt == '3':
+            wait()
+            phone_number = input('Please enter phone number again to continue\n\t>>> ')
+            check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+            user = my_cur.execute(check_num, (phone_number))
+
+            # check if user is in db
+            if user:
+                data_amount = 500
+
+                borrow_mydata(phone_number, data_amount)
+                db.commit()
+
+            else:
+                invalid()
+
+        else:
+            out()
 
     except Exception as e:
         print('An error Occurred: ', e)
@@ -3818,6 +3963,15 @@ def gift_data():
         out()
 
 
+def chat_zigi():
+    print('~'*50)
+    time.sleep(0.7)
+    message = '''\033[31;1m\t\t\t\tChat with Zigi on preferred network such
+                   \tas;whatsapp,facebook messenger
+                   Web and Telegram.Details via sms.
+                   '''
+    return message
+
 # menu function
 def main_menu():
     print('~' * 50)
@@ -3863,7 +4017,7 @@ def main_menu():
         recharge()
 
     elif menu == '8':
-        print()
+        print(chat_zigi())
 
     else:
         print('Invalid Entry\nTry again\n')
@@ -3882,7 +4036,7 @@ def ussd_code():
         print('Invalid ussd\nTry again\n')
         ussd_code()
 
-#
+
 # ussd_code()
 
 
