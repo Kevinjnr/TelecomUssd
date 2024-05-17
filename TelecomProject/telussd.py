@@ -3,6 +3,7 @@ import pymysql
 import time
 import sys
 import os
+from decimal import Decimal
 
 # Initialize the db and my_cur variables
 db = pymysql.connect(
@@ -14,8 +15,8 @@ db = pymysql.connect(
 
 my_cur = db.cursor()
 
-phone_number = ''
-airtime_balance = ''
+# phone_number = ''
+# airtime_balance = ''
 
 
 def clear():
@@ -33,7 +34,7 @@ def wait():
     print(end='\r')
 
 
-#Whatsapp
+# Whatsapp
 def wait_and_count():
     for i in range(3,0,-1):
         sys.stdout.flush()
@@ -59,48 +60,90 @@ def out():
 
 
 def recharge():
-    print('~' * 50)
-    # Check user number
-    phone_number = input('Enter phone number\n\t>>> ')
-    check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
-    user = my_cur.execute(check_num, (phone_number))
-
-    if user:
+    try:
         print('~' * 50)
-        amount = input('Enter amount to recharge\n\t>>> ')
+        # Check user number
+        phone_number = input('\033[31mEnter phone number\n\t>>> ')
+        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+        user = my_cur.execute(check_num, (phone_number))
 
-        # Check if amount input is a numeric value
-        if amount.isnumeric():
-            amount = int(amount)
-            sel_bal = 'SELECT Airtime_balance FROM Telecom_tbl WHERE Phone_number = %s'
-            my_cur.execute(sel_bal, (phone_number,))
-            result = my_cur.fetchone()
+        if user:
+            print('~' * 50)
+            while True:
+                amount = input('Enter amount to recharge\n\t>>> ')
 
-            if result is not None:
-                current_airtime_bal = result[0]
+                # Check if amount input is a numeric value
+                if amount.isnumeric():
+                    amount = int(amount)
 
-                # Credit user
-                new_airtime_bal = current_airtime_bal + amount
+                    # Check if amount input is a numeric value
+                    if amount >= 30:
 
-                # Query to db
-                update_bal = 'UPDATE Telecom_tbl SET Airtime_balance = %s WHERE Phone_number = %s'
-                my_cur.execute(update_bal, (new_airtime_bal, phone_number))
+                        sel_bal = 'SELECT Airtime_balance FROM Telecom_tbl WHERE Phone_number = %s'
+                        my_cur.execute(sel_bal, (phone_number,))
+                        result = my_cur.fetchone()
 
-                # Commit changes
-                db.commit()
+                        if result is not None:
+                            current_airtime_bal = result[0]
 
-                print('~' * 50)
-                print(f'The recharge of N{amount} was successful\nAcct.bal N{amount}')
-            else:
-                invalid()
+                            # Credit user
+                            new_airtime_bal = current_airtime_bal + amount
+
+                            # Query to db
+                            update_bal = 'UPDATE Telecom_tbl SET Airtime_balance = %s WHERE Phone_number = %s'
+                            my_cur.execute(update_bal, (new_airtime_bal, phone_number))
+
+                            # Commit changes
+                            db.commit()
+
+                            print('~' * 50)
+                            print(f'The recharge of N{amount} was successful\nAcct.bal N{amount}')
+
+
+                            sel_bal = 'SELECT Airtime_borrowed_balance FROM Telecom_tbl WHERE Phone_number = %s'
+                            my_cur.execute(sel_bal, (phone_number,))
+                            result = my_cur.fetchone()
+
+                            if result is not None:
+                                borrow_bal = result[0]
+
+                                if borrow_bal != 0:
+                                    rate = Decimal('0.15')
+                                    interest = rate * Decimal(borrow_bal)
+                                    new_bal = new_airtime_bal - borrow_bal - interest
+
+                                    update_bal = 'UPDATE Telecom_tbl SET Airtime_balance = %s,Airtime_borrowed_balance=0 WHERE Phone_number = %s'
+                                    my_cur.execute(update_bal, (new_bal, phone_number))
+
+                                    db.commit()
+
+                                    print(f'N{borrow_bal} deducted from account')
+                                    break
+
+                                else:
+                                    pass
+                                    break
+
+                        else:
+                            invalid()
+                            break
+
+                    else:
+                        time.sleep(0.8)
+                        print('Amount must be more than N30')
+
+                else:
+                    out()
+                    break
 
         else:
-            out()
+            invalid()
 
-    else:
-        invalid()
+    except Exception as e:
+        print('An error occurred: ', e)
 
 
+# Check data bal
 def checkDataBal(phone_number):
     try:
         #Query to check and select data bal
@@ -127,8 +170,8 @@ def checkDataBal(phone_number):
         print('An error occurred: ',e)
 
 
-#db code for transaction
-def buyData(phone_number, data_amount, cost, valid_days=1):
+# db code for transaction
+def buyData(phone_number, data_amount=0, cost=0, valid_days=1):
     # Calculate expiry date outside the loop
     expiry_date = datetime.date.today() + datetime.timedelta(days=valid_days)
 
@@ -210,7 +253,7 @@ def buyData(phone_number, data_amount, cost, valid_days=1):
             print("An error occurred:", e)
 
 
-def buyDataTalk(phone_number, data_amount, cost, talk_time, valid_days=1):
+def buyDataTalk(phone_number, data_amount=0, cost=0, talk_time=0, valid_days=1):
     # Calculate expiry date outside the loop
     expiry_date = datetime.date.today() + datetime.timedelta(days=valid_days)
 
@@ -296,7 +339,8 @@ def buyDataTalk(phone_number, data_amount, cost, talk_time, valid_days=1):
         clear()
 
 
-def data_trans(sender_number,receiver_number,data_amount):
+# Data transfer code
+def data_trans(sender_number,receiver_number,data_amount=0):
     try:
         with db.cursor() as my_cur:
             if data_amount >= 1000:
@@ -367,6 +411,172 @@ def data_trans(sender_number,receiver_number,data_amount):
         print('An error occurred: ', e)
 
 
+def buy_friend_data(sender_number, receiver_number, data_amount=0, cost=0, valid_days=1):
+    # Calculate expiry date outside the loop
+    expiry_date = datetime.date.today() + datetime.timedelta(days=valid_days)
+
+    try:
+        with db.cursor() as my_cur:
+            if data_amount >= 1000:
+                # Convert to gigabytes (GB) with one decimal place
+                bundle_size = f"{data_amount / 1000:.1f}GB"
+            else:
+                # Keep in megabytes (MB)
+                bundle_size = f"{data_amount}MB"
+
+            # Check if sender has sufficient data amount
+            sel_sender_bal = 'SELECT Airtime_balance FROM Telecom_tbl WHERE Phone_number = %s'
+            my_cur.execute(sel_sender_bal, (sender_number))
+            result = my_cur.fetchone()
+
+            if result is not None:
+                sender_airtime_bal = result[0]
+
+                if sender_airtime_bal >= cost:
+                    new_airtime_bal = sender_airtime_bal - cost
+
+                    update_sender_bal = 'UPDATE Telecom_tbl SET Airtime_balance = %s WHERE Phone_number = %s'
+                    my_cur.execute(update_sender_bal,(new_airtime_bal,sender_number))
+
+                    # Select receiver data bal
+                    sel_receiver_bal = 'SELECT Data_balance, Data_expires FROM Telecom_tbl WHERE Phone_number = %s'
+                    my_cur.execute(sel_receiver_bal, (receiver_number))
+                    result = my_cur.fetchone()
+
+                    if result is not None:
+                        receiver_data_bal = result[0]
+                        data_expire = result[1]
+
+                        new_data_bal = receiver_data_bal + data_amount
+
+                        update_receiver_bal = 'UPDATE Telecom_tbl SET Data_balance = %s, Data_expires = %s WHERE Phone_number = %s '
+                        my_cur.execute(update_receiver_bal, (new_data_bal, expiry_date, receiver_number))
+
+                        db.commit()
+                        # Print message
+                        wait_and_count()
+                        print('~' * 50)
+                        print(f"You have gifted {bundle_size} @ ₦{cost} valid for {valid_days} day(s) to {receiver_number}.")
+                        time.sleep(3)
+                        clear()
+
+                        # Check if data has expired
+                        # if data_expire and data_expire < datetime.date.today():
+                        #     print('~' * 50)
+                        #     print('Your data has expired')
+                        #     # Update data bal
+                        #     update_bal = 'UPDATE Telecom_tbl SET Data_balance = 0 WHERE Phone_number = %s'
+                        #     my_cur.execute(update_bal, (receiver_number,))
+                        #     db.commit()
+
+                    else:
+                        print('~' * 50)
+                        print('Receiver not found')
+                        invalid()
+
+                else:
+                    print('~' * 50)
+                    print('Insufficient airtime balance.')
+
+            else:
+                print('~' * 50)
+                print('Sender not found')
+                invalid()
+
+    except Exception as e:
+        print('~' * 50)
+        print('An error occurred: ', e)
+
+
+def borrow_air(phone_number,amount):
+    try:
+        sel_bal = 'SELECT Airtime_balance FROM Telecom_tbl WHERE Phone_number = %s'
+        my_cur.execute(sel_bal, (phone_number))
+        result = my_cur.fetchone()
+
+        if result is not None:
+            sender_bal = result[0]
+
+            if sender_bal <= 49.99:
+                print("\t\t\033[34mY'ello! you are qualified to borrow airtime")
+
+                sel_bal = 'SELECT Airtime_borrowed_balance FROM Telecom_tbl WHERE Phone_number = %s'
+                my_cur.execute(sel_bal, (phone_number))
+                result = my_cur.fetchone()
+
+                if result is not None:
+                    borrow_bal = result[0]
+
+                    new_borrow_bal = borrow_bal + amount
+
+                    update_bal = 'UPDATE Telecom_tbl SET Airtime_borrowed_balance = % s Where Phone_number = %s'
+                    my_cur.execute(update_bal,(new_borrow_bal,phone_number))
+
+                    db.commit()
+
+                    wait_and_count()
+                    print(f"\033[34;1mY'ello! you have been credited with N{amount} ")
+
+                else:
+                    print('~' * 50)
+                    print('No query returned')
+
+            else:
+                print("\t\t\033[34mY'ello! you are qualified, but your airtime balance is low. You can borrow airtime or\n\t\tdata when your balance is lower than N49.99 ")
+
+        else:
+            print('~' * 50)
+            print('No query returned')
+
+    except Exception as e:
+        print('An error occurred: ', e)
+
+
+def borrow_mydata(phone_number,data_amount):
+    try:
+        if data_amount >= 1000:
+            # Convert to gigabytes (GB) with one decimal place
+            bundle_size = f"{data_amount / 1000:.1f}GB"
+        else:
+            # Keep in megabytes (MB)
+            bundle_size = f"{data_amount}MB"
+
+        sel_bal = 'SELECT Airtime_balance FROM Telecom_tbl WHERE Phone_number = %s'
+        my_cur.execute(sel_bal, (phone_number))
+        result = my_cur.fetchone()
+
+        if result is not None:
+            sender_bal = result[0]
+
+            if sender_bal <= 49.99:
+                pass
+
+                sel_bal = 'SELECT Data_borrowed_balance FROM Telecom_tbl WHERE Phone_number = %s'
+                my_cur.execute(sel_bal, (phone_number))
+                result = my_cur.fetchone()
+
+                if result is not None:
+                    borrow_bal = result[0]
+
+                    new_borrow_bal = data_amount + borrow_bal
+
+                    update_bal = 'UPDATE Telecom_tbl SET Data_borrowed_balance = % s Where Phone_number = %s'
+                    my_cur.execute(update_bal, (new_borrow_bal, phone_number))
+
+                    db.commit()
+
+                    wait_and_count()
+                    print(f"\033[34;1mY'ello! you have been credited with {data_amount} ")
+
+            else:
+                print("\t\t\033[34mY'ello! you are qualified, but your airtime balance is low. You can borrow airtime or\n\t\tdata when your balance is lower than N49.99 ")
+
+        else:
+            print('No query returned')
+    except Exception as e:
+        print('An error occurred: ', e)
+
+
 # Data plan
 def data_plans_subscription():
     wait()
@@ -393,7 +603,7 @@ def data_plans_subscription():
 def daily_plan():
     wait()
     print('~' * 50)
-    print('\t\tDaily Plan\n')
+    print('\t\t\033[0mDaily Plan\n')
     print('1. 100MB for N100')
     time.sleep(0.6)
     print('2. 200MB for N200')
@@ -1121,7 +1331,6 @@ def whatsapp():
             print('~' * 50)
             ans = input("\t> ")
             if ans.isnumeric():
-                ans = ans
                 if ans == '1':
                     wait_and_count()
                     phone_number = input('Please enter phone number again to continue\n\t>>> ')
@@ -1859,7 +2068,7 @@ wait()
 
 def social_bundles():
     print('~' * 50)
-    print('Social Bundles')
+    print('\t\t\033[32;1mSocial Bundles')
     time.sleep(1)
     print("1. Whatsapp")
     time.sleep(1)
@@ -1949,81 +2158,386 @@ def social_bundles():
         time.sleep(0.5)
 
 
-# Transfer data
-def data_transfer():
+# Borrow airtime
+def borrow_airtime():
     try:
         wait()
-        print('~' * 50)
-        sender_number = input('Please enter your phone number to continue\n\t> ')
-        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
-        user = my_cur.execute(check_num, (sender_number))
+        print('~'*50)
+        print('\033[34m1. N50 ')
+        time.sleep(0.6)
+        print('\033[34m2. N100 ')
+        time.sleep(0.6)
+        print('\033[34m3. N500')
+        time.sleep(0.6)
+        print('~'*50)
+        opt = input('\t> ')
 
-        if user:
+        if opt == '1':
             wait()
-            print('~' * 50)
-            receiver_number = input('Enter receiver phone number\n\t> ')
+            phone_number = input('Please enter phone number again to continue\n\t>>> ')
             check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
-            user = my_cur.execute(check_num, (receiver_number))
+            user = my_cur.execute(check_num, (phone_number))
 
+            # check if user is in db
             if user:
-                wait()
-                print('~'*50)
-                data_amount = input('Enter data amount \n\t> ')
-                print('~' * 50)
+                amount = 50
 
-                if data_amount.isnumeric():
-                    data_amount = int(data_amount)
-
-                    limit = 2000
-                    if data_amount <= int(limit):
-
-                        wait_and_count()
-                        data_trans(sender_number,receiver_number,data_amount)
-                        db.commit()
-
-                        print(end='\r')
-                        print(end='\r')
-                        time.sleep(1)
-                        clear()
-
-                    else:
-                        print("Can't make transfer more than 2000MB ")
-                        time.sleep(0.7)
-                        print('Service time out')
-
-                else:
-                    out()
+                borrow_air(phone_number, amount)
+                db.commit()
 
             else:
-                print('~' * 50)
+                invalid()
+
+        elif opt == '2':
+            wait()
+            phone_number = input('Please enter phone number again to continue\n\t>>> ')
+            check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+            user = my_cur.execute(check_num, (phone_number))
+
+            # check if user is in db
+            if user:
+                amount = 100
+
+                borrow_air(phone_number, amount)
+                db.commit()
+
+            else:
+                invalid()
+
+        elif opt == '3':
+            wait()
+            phone_number = input('Please enter phone number again to continue\n\t>>> ')
+            check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+            user = my_cur.execute(check_num, (phone_number))
+
+            # check if user is in db
+            if user:
+                amount = 500
+
+                borrow_air(phone_number, amount)
+                db.commit()
+
+            else:
                 invalid()
 
         else:
-            print('~' * 50)
-            invalid()
+            out()
 
     except Exception as e:
-        print('~' * 50)
-        print('An error occurred: ', e)
+        print('An error Occurred: ', e)
 
 
-# GIFT DATA
-def gift_data():
+# Borrow data
+def borrow_data():
+    try:
+        pass
+
+    except Exception as e:
+        print('An error Occurred: ', e)
+
+
+# Borrow airtime & Data
+def borrow_credit():
     print('~' * 50)
-    print('\tGift Data')
     time.sleep(0.6)
-    print('1.Transfer from data balance')
+    print('\t\t\033[33;1mBorrow credit ')
     time.sleep(0.6)
-    print('2.Buy for a friend')
+    print('1.Borrow Airtime')
     time.sleep(0.6)
+    print('2. Borrow Data')
     print('~' * 50)
     opt = input('\t> ')
 
     if opt == '1':
-        data_transfer()
+        borrow_airtime()
 
     elif opt == '2':
-        print()
+        borrow_data()
+
+    else:
+        out()
+
+
+# Travel Pass Plan
+def travel_pass_plan():
+    wait()
+    while True:
+        print('~' * 50)
+        print(" Travel Pass Plan \n")
+        time.sleep(1)
+        print("1. 7days(voice) 4000talktime and 100MB @ ₦10,000.")
+        time.sleep(1)
+        print("2. 7days 1GB Data @ ₦10,000.")
+        # time.sleep(1)
+        # print("3. Inflight Roaming Data.")
+        # time.sleep(1)
+        # print("4. Roaming Balance Check.")
+        time.sleep(1.5)
+        print('~' * 50)
+        ans = input("> ")
+
+        if ans == '1':
+            wait_and_count()
+            phone_number = input('Please enter phone number again to continue\n\t>>> ')
+            check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+            user = my_cur.execute(check_num, (phone_number))
+            if user:
+                data_amount = 100
+                cost = 10000
+                talk_time = 4000
+                days = 7
+
+                buyDataTalk(phone_number, data_amount, cost, talk_time, days)
+                db.commit()
+
+                print(end='\r')
+                print(end='\r')
+                time.sleep(1)
+                clear()
+                break
+
+            else:
+                invalid()
+                break
+
+        elif ans == '2':
+            wait_and_count()
+            phone_number = input('Please enter phone number again to continue\n\t>>> ')
+            check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+            user = my_cur.execute(check_num, (phone_number))
+
+            # check if user is in db
+            if user:
+                data_amount = 1000
+                cost = 10000
+                days = 7
+
+                buyData(phone_number, data_amount, cost, days)
+                db.commit()
+
+                print(end='\r')
+                print(end='\r')
+                time.sleep(1)
+                clear()
+                break
+
+            else:
+                invalid()
+                break
+
+        else:
+            out()
+            break
+
+    clear()
+
+
+# Data Hybrid
+def data_hybrid():
+    wait()
+    while True:
+        print('~' * 50)
+        print(" \tData Hybrid \n")
+        time.sleep(1)
+        print("1. ₦2,000 for 4GB.")
+        time.sleep(1)
+        print("2. ₦3,000 for 8GB.")
+        time.sleep(1)
+        print("3. ₦3,500 for 10GB.")
+        time.sleep(1)
+        print("4. ₦4,000 for 12GB.")
+        time.sleep(1.5)
+        print('~' * 50)
+        ans = input("\t> ")
+
+        if ans == '1':
+            wait_and_count()
+            phone_number = input('Please enter phone number again to continue\n\t>>> ')
+            check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+            user = my_cur.execute(check_num, (phone_number))
+
+            # check if user is in db
+            if user:
+                data_amount = 4000
+                cost = 2000
+                days = 14
+
+                buyData(phone_number, data_amount, cost, days)
+                db.commit()
+
+                print(end='\r')
+                print(end='\r')
+                time.sleep(1)
+                clear()
+                break
+
+            else:
+                invalid()
+                break
+
+        elif ans == '2':
+            wait_and_count()
+            phone_number = input('Please enter phone number again to continue\n\t>>> ')
+            check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+            user = my_cur.execute(check_num, (phone_number))
+
+            # check if user is in db
+            if user:
+                data_amount = 8000
+                cost = 3000
+                days = 14
+
+                buyData(phone_number, data_amount, cost, days)
+                db.commit()
+
+                print(end='\r')
+                print(end='\r')
+                time.sleep(1)
+                clear()
+                break
+
+            else:
+                invalid()
+                break
+
+        elif ans == '3':
+            wait_and_count()
+            phone_number = input('Please enter phone number again to continue\n\t>>> ')
+            check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+            user = my_cur.execute(check_num, (phone_number))
+
+            # check if user is in db
+            if user:
+                data_amount = 10000
+                cost = 3500
+                days = 14
+
+                buyData(phone_number, data_amount, cost, days)
+                db.commit()
+
+                print(end='\r')
+                print(end='\r')
+                time.sleep(1)
+                clear()
+                break
+
+            else:
+                invalid()
+                break
+
+        elif ans == '4':
+            wait_and_count()
+            phone_number = input('Please enter phone number again to continue\n\t>>> ')
+            check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+            user = my_cur.execute(check_num, (phone_number))
+
+            # check if user is in db
+            if user:
+                data_amount = 12000
+                cost = 4000
+                days = 14
+
+                buyData(phone_number, data_amount, cost, days)
+                db.commit()
+
+                print(end='\r')
+                print(end='\r')
+                time.sleep(1)
+                clear()
+                break
+
+            else:
+                invalid()
+                break
+
+        else:
+            out()
+            break
+
+    clear()
+
+
+# Inflight Roaming Data
+def inflight_roaming_data():
+    wait()
+    while True:
+        print('~' * 50)
+        print(" Inflight Roaming Data \n")
+        time.sleep(1)
+        print("1. 50MB @ ₦200.")
+        time.sleep(1.5)
+        print('~' * 50)
+        ans = input("\t> ")
+
+        if ans == '1':
+            wait_and_count()
+            phone_number = input('Please enter phone number again to continue\n\t>>> ')
+            check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+            user = my_cur.execute(check_num, (phone_number))
+
+            # check if user is in db
+            if user:
+                data_amount = 50
+                cost = 200
+                days = 3
+
+                buyData(phone_number, data_amount, cost, days)
+                db.commit()
+
+                print(end='\r')
+                print(end='\r')
+                time.sleep(1)
+                clear()
+                break
+
+            else:
+                invalid()
+                break
+
+        else:
+            out()
+            break
+
+    clear()
+
+
+wait()
+
+
+def roaming_int():
+    while True:
+        print("\t\t\033[36;1mRoaming \n")
+        time.sleep(1)
+        print("1. Travel Pass Plan.")
+        time.sleep(1)
+        print("2. Data Hybrid")
+        time.sleep(1)
+        print("3. Inflight Roaming Data")
+        time.sleep(1.5)
+        print('~' * 50)
+        ans = input("\t> ")
+
+        if ans == '1':
+            clear()
+            travel_pass_plan()
+            time.sleep(1)
+            exit()
+
+        elif ans == '2':
+            clear()
+            data_hybrid()
+            time.sleep(1)
+            exit()
+
+        elif ans == '3':
+            clear()
+            inflight_roaming_data()
+            time.sleep(1)
+            exit()
+
+        else:
+            out()
+            break
 
 
 # YouTube Video Packs
@@ -2254,7 +2768,7 @@ def video_pack():
     wait()
     while True:
         print('~' * 50)
-        print("\t Video Packs \n")
+        print("\t \033[31;1mVideo Packs \n")
         time.sleep(1)
         print("1. Youtube video packs.")
         time.sleep(1)
@@ -2287,6 +2801,1023 @@ def video_pack():
             break
 
 
+# Transfer data
+def data_transfer():
+    try:
+        wait()
+        print('~' * 50)
+        sender_number = input('Please enter your phone number to continue\n\t> ')
+        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+        user = my_cur.execute(check_num, (sender_number))
+
+        if user:
+            wait()
+            print('~' * 50)
+            receiver_number = input('Enter receiver phone number\n\t> ')
+            check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+            user = my_cur.execute(check_num, (receiver_number))
+
+            if user:
+                wait()
+                print('~'*50)
+                data_amount = input('Enter data amount \n\t> ')
+                print('~' * 50)
+
+                if data_amount.isnumeric():
+                    data_amount = int(data_amount)
+
+                    limit = 2000
+                    if data_amount <= int(limit):
+
+                        wait_and_count()
+                        data_trans(sender_number,receiver_number,data_amount)
+                        db.commit()
+
+                        print(end='\r')
+                        print(end='\r')
+                        time.sleep(1)
+                        clear()
+
+                    else:
+                        print("Can't make transfer more than 2000MB ")
+                        time.sleep(0.7)
+                        print('Service time out')
+
+                else:
+                    out()
+
+            else:
+                print('~' * 50)
+                invalid()
+
+        else:
+            print('~' * 50)
+            invalid()
+
+    except Exception as e:
+        print('~' * 50)
+        print('An error occurred: ', e)
+
+
+# Buy for a friend
+def buy_friend():
+    try:
+        wait()
+        print('~' * 50)
+        sender_number = input('Please enter your phone number to continue\n\t> ')
+        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+        user = my_cur.execute(check_num, (sender_number))
+
+        if user:
+            wait()
+            print('~'*50)
+            print('\tWelcome to our gifting service.Select data plan to gift.')
+            time.sleep(0.6)
+            print('1. Data Plans')
+            time.sleep(0.6)
+            print('2. Social Bundles')
+            time.sleep(0.6)
+            print('3. Video Pack')
+            time.sleep(0.6)
+            print('0. Back')
+            print('~' * 50)
+            opt = input('\t> ')
+
+            if opt == '1':
+                wait()
+                print('~'*50)
+                print(' BUY DATA PLANS')
+                time.sleep(0.6)
+                print('1. Daily Plan')
+                time.sleep(0.6)
+                print('2. Weekly Plan')
+                time.sleep(0.6)
+                print('3. Monthly Plan')
+                time.sleep(0.6)
+                print('4. 2-3Month Plan ')
+                print('~' * 50)
+                ans = input('\t> ')
+
+                if ans == '1':
+                    wait()
+                    print('~' * 50)
+                    print('\t\tDaily Plan\n')
+                    print('1. 100MB for N100')
+                    time.sleep(0.6)
+                    print('2. 200MB for N200')
+                    time.sleep(0.6)
+                    print('3. 350MB for N300')
+                    time.sleep(0.6)
+                    print('4. 1.5GB for N500')
+                    print('~' * 50)
+                    res = input('\t> ')
+
+                    if res == '1':
+                        print('~'*50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 100
+                            cost = 100
+
+                            buy_friend_data(sender_number,receiver_number, data_amount, cost)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif res == '2':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 200
+                            cost = 200
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif res == '3':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 350
+                            cost = 300
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif res == '4':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 1500
+                            cost = 500
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    else:
+                        out()
+
+                elif ans == '2':
+                    wait()
+                    print('~' * 50)
+                    print('\t\tWeekly Plan\n')
+                    print('1. N300 for 350MB')
+                    time.sleep(0.6)
+                    print('2. N500 for 700MB/7days')
+                    time.sleep(0.6)
+                    print('3. N600 for 1GB')
+                    time.sleep(0.6)
+                    print('4. N1000 for 1.5GB')
+                    time.sleep(0.6)
+                    print('~' * 50)
+                    res = input('\t> ')
+
+                    if res == '1':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 350
+                            cost = 300
+                            days = 7
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost, days)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif res == '2':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 700
+                            cost = 500
+                            days = 7
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost, days)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif res == '3':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 1000
+                            cost = 600
+                            days = 7
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost, days)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif res == '4':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 1500
+                            cost = 1000
+                            days = 7
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost, days)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                elif ans == '3':
+                    wait()
+                    print('~' * 50)
+                    print('\t\tMonthly Plan\n')
+                    print('1. N1000 for 1.2GB')
+                    time.sleep(0.6)
+                    print('2. N1200 for 1.5GB')
+                    time.sleep(0.6)
+                    print('3. N2000 for 4GB')
+                    time.sleep(0.6)
+                    print('4. N3000 for 8GB')
+                    time.sleep(0.6)
+                    print('~' * 50)
+                    res = input('\t> ')
+
+                    if res == '1':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 1200
+                            cost = 1000
+                            days = 30
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost, days)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif res == '2':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 1500
+                            cost = 1200
+                            days = 30
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost, days)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif res == '3':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 4000
+                            cost = 2000
+                            days = 30
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost, days)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif res == '4':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 8000
+                            cost = 3000
+                            days = 30
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost, days)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                elif ans == '4':
+                    wait()
+                    print('~' * 50)
+                    print('\t\t2-3 Month Plan\n')
+                    print('1. N8000 for 30GB/60days')
+                    time.sleep(0.6)
+                    print('2. N20000 for 100GB/60days')
+                    time.sleep(0.6)
+                    print('3. N30000 for 160GB/60days')
+                    time.sleep(0.6)
+                    print('4. N50000 for 400GB/90days')
+                    time.sleep(0.6)
+                    print('~' * 50)
+                    res = input('\t> ')
+
+                    if res == '1':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 30000
+                            cost = 8000
+                            days = 60
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost, days)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif res == '2':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 100000
+                            cost = 20000
+                            days = 60
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost, days)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif res == '3':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 160000
+                            cost = 30000
+                            days = 60
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost, days)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif res == '4':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 400000
+                            cost = 50000
+                            days = 90
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost, days)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    else:
+                        out()
+
+                else:
+                    out()
+
+            elif opt == '2':
+                print('~' * 50)
+                print('Social Bundles')
+                time.sleep(1)
+                print("1. Whatsapp")
+                time.sleep(1)
+                print("2. Facebook")
+                time.sleep(1)
+                print("3. Instagram")
+                time.sleep(1)
+                print("4. Tiktok")
+                time.sleep(1)
+                ask = input('\t> ')
+
+                if ask == '1':
+                    print('~' * 50)
+                    print("\t\tWhatsapp\n")
+                    print("1. Daily @ ₦25 for 50MB")
+                    time.sleep(1)
+                    print("2. Weekly @ ₦50 for 100MB")
+                    time.sleep(1)
+                    print("3. Monthly @ ₦150 for 200MB")
+                    time.sleep(1.5)
+                    print('~' * 50)
+                    ans = input("\t> ")
+
+                    if ans == '1':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 50
+                            cost = 25
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif ans == '2':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 100
+                            cost = 50
+                            days = 7
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost, days)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif ans == '3':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 200
+                            cost = 150
+                            days = 30
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost, days)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    else:
+                        out()
+
+                elif ask == '2':
+                    print('~' * 50)
+                    print("\t\tFacebook\n")
+                    print("1. Daily @ ₦25 for 50MB")
+                    time.sleep(1)
+                    print("2. Weekly @ ₦50 for 100MB")
+                    time.sleep(1)
+                    print("3. Monthly @ ₦150 for 250MB")
+                    time.sleep(1.5)
+                    print('~' * 50)
+                    ans = input("\t> ")
+
+                    if ans == '1':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 50
+                            cost = 25
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif ans == '2':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 100
+                            cost = 50
+                            days = 7
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost, days)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif ans == '3':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 250
+                            cost = 150
+                            days = 30
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost, days)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    else:
+                        out()
+
+                elif ask == '3':
+                    print('~' * 50)
+                    print("\t\tInstagram\n")
+                    print("1. ₦100 for 250MB/1 day.")
+                    time.sleep(1)
+                    print("2. ₦150 for 350MB/2 days.")
+                    time.sleep(1)
+                    print("3. ₦200 for 1GB/1 day.")
+                    time.sleep(1)
+                    print("4. ₦250 for 1.5GB/3-days.")
+                    time.sleep(1.5)
+                    print('~' * 50)
+                    ans = input("\t> ")
+
+                    if ans == '1':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 250
+                            cost = 100
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif ans == '2':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 350
+                            cost = 150
+                            days = 2
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost, days)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif ans == '3':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 1000
+                            cost = 200
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif ans == '4':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 1500
+                            cost = 250
+                            days = 3
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost, days)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    else:
+                        out()
+
+                elif ask == '4':
+                    print('~' * 50)
+                    print("\t\tTiktok\n")
+                    print("1. ₦100 for 200MB/1 day.")
+                    time.sleep(1)
+                    print("2. ₦150 for 350MB/2 days.")
+                    time.sleep(1)
+                    print("3. ₦200 for 1GB/1 day.")
+                    time.sleep(1)
+                    print("4. ₦200 for 1.5GB/3-days.")
+                    time.sleep(1.5)
+                    print('~' * 50)
+                    ans = input("\t> ")
+
+                    if ans == '1':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 200
+                            cost = 100
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif ans == '2':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 350
+                            cost = 150
+                            days = 2
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost, days)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif ans == '3':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 1000
+                            cost = 200
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif ans == '4':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 1500
+                            cost = 200
+                            days = 3
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost, days)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    else:
+                        out()
+
+                else:
+                    out()
+
+            elif opt == '3':
+                print('~' * 50)
+                print("\t Video Packs \n")
+                time.sleep(0.6)
+                print("1. Youtube video packs.")
+                time.sleep(0.6)
+                ans = input('\t> ')
+
+                if ans == '1':
+                    print('~' * 50)
+                    print("  YouTube Video Packs\n")
+                    print("1. 24 hour @ ₦100 for 800MB.")
+                    time.sleep(1)
+                    print("2. 24 hours @ ₦150 for 1.2GB.")
+                    time.sleep(1)
+                    print("3. 500MB at ₦50 24 hours.")
+                    time.sleep(1.5)
+                    print('~' * 50)
+                    ask = input("\t> ")
+
+                    if ask == '1':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 800
+                            cost = 100
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif ask == '2':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 1200
+                            cost = 150
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    elif ask == '3':
+                        print('~' * 50)
+                        receiver_number = input("Enter recipient's number \n\t> ")
+                        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+                        user = my_cur.execute(check_num, (receiver_number))
+
+                        if user:
+                            data_amount = 500
+                            cost = 50
+
+                            buy_friend_data(sender_number, receiver_number, data_amount, cost)
+                            db.commit()
+
+                            print(end='\r')
+                            print(end='\r')
+                            time.sleep(1)
+                            clear()
+
+                        else:
+                            invalid()
+
+                    else:
+                        out()
+
+                else:
+                    out()
+
+            else:
+                out()
+
+        else:
+            print('No query returned')
+
+    except Exception as e:
+        print('An error occurred: ',e)
+
+
+# GIFT DATA
+def gift_data():
+    print('~' * 50)
+    print('\t\t\033[35;1mGift Data')
+    time.sleep(0.6)
+    print('1.Transfer from data balance')
+    time.sleep(0.6)
+    print('2.Buy for a friend')
+    time.sleep(0.6)
+    print('~' * 50)
+    opt = input('\t> ')
+
+    if opt == '1':
+        data_transfer()
+
+    elif opt == '2':
+        buy_friend()
+
+    else:
+        out()
+
+
 # menu function
 def main_menu():
     print('~' * 50)
@@ -2317,10 +3848,10 @@ def main_menu():
         social_bundles()
 
     elif menu == '3':
-        print('f')
+        borrow_credit()
 
     elif menu == '4':
-        print('account statement')
+        roaming_int()
 
     elif menu == '5':
         video_pack()
@@ -2351,6 +3882,7 @@ def ussd_code():
         print('Invalid ussd\nTry again\n')
         ussd_code()
 
+#
 # ussd_code()
 
 
