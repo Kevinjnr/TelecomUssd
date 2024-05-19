@@ -1,5 +1,4 @@
 import random
-import time
 
 from telussd import *
 
@@ -27,6 +26,13 @@ def gen_number():
     return phone_number
 
 
+def print_slowly(text):
+    for char in text:
+        print(char, end='', flush=True)  # Print without newline and flush the output
+        time.sleep(0.05)  # Adjust the delay (in seconds) as desired
+    print()  # Print a newline at the end
+
+
 def re_charge():
     global airtime_balance
     print('~' * 50)
@@ -43,9 +49,11 @@ def re_charge():
 def register_num():
     global airtime_balance
     print('~' * 50)
-    print('\033[34mWelcome!')
+    print()
+    print_slowly('\033[34mWelcome!')
     time.sleep(1)
-    print('\033[34mPlease register your sim with us')
+    print_slowly('\033[34mPlease register your sim with us\033[0m')
+    print()
     time.sleep(2)
     # Creating an empty list
     _list = []
@@ -82,14 +90,16 @@ def register_num():
         # print(sp_details)
         wait_and_count()
         time.sleep(1)
+        print()
         print('~' * 50)
-        print('Registration successful')
+        print_slowly('Registration successful')
         time.sleep(2)
-        print(f'Hello!, {full_name} Thank you for registering with us.')
+        print_slowly(f'Hello!, {full_name} Thank you for registering with us.')
         time.sleep(1)
-        print(f'Phone number: {sp_details[-1]}')
+        print_slowly(f'Phone number: {sp_details[-1]}')
         time.sleep(1)
-        print(f'Account has been credited with N{airtime_balance}\nAcct.bal:{airtime_balance} ')
+        print()
+        print_slowly(f'Account has been credited with N{airtime_balance}\nAcct.bal:{airtime_balance} ')
 
         # Sql insert query
         insert_dt = 'INSERT INTO telecom_tbl(first_name,last_name,phone_number,airtime_balance) VALUES (%s,%s,%s,%s)'
@@ -112,12 +122,13 @@ def register_num():
         if opt == '1':
             time.sleep(2)
             print('~' * 50)
-            print('Welcome to our service')
+            print_slowly('Welcome to our service')
             time.sleep(1)
             return ussd_code()
 
         elif opt == '2':
-            print('Thank you for using our service')
+            print()
+            print_slowly('Thank you for using our service')
             time.sleep(1)
 
         else:
@@ -131,21 +142,23 @@ def register_num():
 # Function for if user is already registered
 def already_user():
     print('~' * 50)
+    print()
     phone_number = input('\033[32mEnter phone number\n\t>>> ')
 
     try:
-        # Query to check if number already exist's in db
+        # Query to check if number already exists in db
         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
         my_cur.execute(check_num,(phone_number))
         user = my_cur.fetchone()
 
-        # If user is already in the db the code proceed's to show ussd
+        # If user is already in the db the code proceeds to show ussd
         while True:
             if user:
                 wait()
                 print('~' * 50)
-                print('1. Continue')
-                print('2. Cancel')
+                print()
+                print_slowly('1. Continue')
+                print_slowly('2. Cancel')
                 print('~' * 50)
                 res = input('\t>>> ')
                 if res == '1' and res.isnumeric():
@@ -157,17 +170,20 @@ def already_user():
                     break
 
                 elif res == '2' and res.isnumeric():
+                    print()
                     print('~' * 50)
                     print('Thank you for using our service')
                     break
 
                 else:
+                    print()
                     print('~' * 50)
                     print('Invalid response. Please try again')
                     time.sleep(0.5)
                     print('Service time out')
 
             else:
+                print()
                 print('~' * 50)
                 print('Invalid number\nPlease register your number to continue this process')
                 break
@@ -179,14 +195,16 @@ def already_user():
 
 # Function to ask a user if they already have their number registered to the db or not
 def option():
+    print()
     print('~' * 50)
-    print('\033[31mWelcome to our service')
+    print_slowly('\t\t\033[31;107;3;1mWelcome to our service\033[0m')
     time.sleep(1)
-    print('\033[31mWould you like to:')
+    print_slowly('\033[31;1mWould you like to:')
     time.sleep(1)
-    print('1. Register number')
+    print()
+    print_slowly('1. Register number')
     time.sleep(0.8)
-    print('2. User')
+    print_slowly('2. User\033[0m')
 
     while True:
         print('~' * 50)

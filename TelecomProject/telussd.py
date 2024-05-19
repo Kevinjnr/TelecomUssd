@@ -1,9 +1,4 @@
-import datetime
-import pymysql
-import time
-import sys
-import os
-from decimal import Decimal
+from back import *
 
 # Initialize the db and my_cur variables
 db = pymysql.connect(
@@ -46,6 +41,13 @@ def wait_and_count():
     print(end='\r')
 
 
+def print_slowly(text):
+    for char in text:
+        print(char, end='', flush=True)  # Print without newline and flush the output
+        time.sleep(0.05)  # Adjust the delay (in seconds) as desired
+    print()  # Print a newline at the end
+
+
 def invalid():
     print('~' * 50)
     print('Invalid Phone number.')
@@ -63,7 +65,7 @@ def recharge():
     try:
         print('~' * 50)
         # Check user number
-        phone_number = input('\033[31mEnter phone number\n\t>>> ')
+        phone_number = input('\033[31;1mEnter phone number\033[0m\n\t>>> ')
         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
         user = my_cur.execute(check_num, (phone_number))
 
@@ -96,8 +98,11 @@ def recharge():
                             # Commit changes
                             db.commit()
 
+                            wait_and_count()
                             print('~' * 50)
-                            print(f'The recharge of N{amount} was successful\nAcct.bal N{amount}')
+                            print_slowly(f'The recharge of N{amount}.00 was successful\nAcct.bal N{amount}')
+                            with open('sms.txt','w') as fh:
+                                fh.write(f'Account recharge of N{amount}.00 was succesful. Get 1.5GB at N500.\nDial *312# to buy ')
 
                             sel_bal = 'SELECT Airtime_borrowed_balance FROM Telecom_tbl WHERE Phone_number = %s'
                             my_cur.execute(sel_bal, (phone_number,))
@@ -116,7 +121,7 @@ def recharge():
 
                                     db.commit()
 
-                                    print(f'N{borrow_bal} deducted from account')
+                                    print_slowly(f'N{borrow_bal}.00 deducted from account')
                                     break
 
                                 else:
@@ -162,9 +167,13 @@ def checkDataBal(phone_number):
             if data_bal == 0:
                 print('~' * 50)
                 print('You have no active data bundle')
+                with open('sms.txt', 'w') as fh:
+                    fh.write(f"Dear customer, you don't have any active data bundle.\nPlease dial *312*1# to buy another bundle.")
             else:
                 print('~' * 50)
                 print(f'Your data balance is {data_bal}MB')
+                with open('sms.txt', 'w') as fh:
+                    fh.write(f"Your data balance: {data_bal}MB.\nGet 1.5GB @ N200 Tiktok, dial *312*2#.")
 
         else:
             print('~' * 50)
@@ -172,13 +181,14 @@ def checkDataBal(phone_number):
 
     except Exception as e:
         print('~' * 50)
-        print('An error occurred: ',e)
+        print('An error occurred: ', e)
 
 
 # db code for transaction
 def buyData(phone_number, data_amount=0, cost=0, valid_days=1):
     # Calculate expiry date outside the loop
     expiry_date = datetime.date.today() + datetime.timedelta(days=valid_days)
+    expiry_date_time = datetime.datetime.now() + datetime.timedelta(days=valid_days)
 
     with db.cursor() as my_cur:
         try:
@@ -212,11 +222,13 @@ def buyData(phone_number, data_amount=0, cost=0, valid_days=1):
 
                     if current_balance >= cost:
                         # Print message
-                        wait()
+                        wait_and_count()
                         print('~' * 50)
                         print(f"You have been credited with {bundle_size} @ ₦{cost} valid for {valid_days} day(s).")
                         time.sleep(3)
                         clear()
+                        with open('sms.txt', 'w') as fh:
+                            fh.write(f'Activation of {bundle_size} bundle for {valid_days}day(s) @ ₦{cost} was successful\nand expiires at {expiry_date_time} ')
 
                         # Deduct from bal
                         new_balance = current_balance - cost
@@ -235,7 +247,6 @@ def buyData(phone_number, data_amount=0, cost=0, valid_days=1):
 
                             # Commit changes
                             db.commit()
-
 
                             sel_bal = 'SELECT Data_borrowed_balance FROM Telecom_tbl WHERE Phone_number = %s'
                             my_cur.execute(sel_bal, (phone_number,))
@@ -291,6 +302,7 @@ def buyData(phone_number, data_amount=0, cost=0, valid_days=1):
 def buyDataTalk(phone_number, data_amount=0, cost=0, talk_time=0, valid_days=1):
     # Calculate expiry date outside the loop
     expiry_date = datetime.date.today() + datetime.timedelta(days=valid_days)
+    expiry_date_time = datetime.datetime.now() + datetime.timedelta(days=valid_days)
 
     with db.cursor() as my_cur:
         while True:
@@ -326,11 +338,13 @@ def buyDataTalk(phone_number, data_amount=0, cost=0, talk_time=0, valid_days=1):
                 if current_balance >= cost:
 
                     # Print message
-                    wait()
+                    wait_and_count()
                     print('~' * 50)
-                    print(f"You have been credited with {bundle_size} and {talk_time}talktime @ ₦{cost} valid for {valid_days} day(s).")
+                    print_slowly(f"You have been credited with {bundle_size}+{talk_time}talktime @ ₦{cost} valid for {valid_days} day(s).")
                     time.sleep(3)
                     clear()
+                    with open('sms.txt', 'w') as fh:
+                        fh.write(f'Activation of {bundle_size}+{talk_time}talktime bundle for {valid_days}day(s) @ ₦{cost} was successful\nand expiires at {expiry_date_time} ')
 
                     # Deduct from bal
                     new_balance = current_balance - cost
@@ -451,8 +465,12 @@ def data_trans(sender_number,receiver_number,data_amount=0):
                             # Commit changes
                             db.commit()
 
+                            wait_and_count()
                             print('~' * 50)
                             print(f"Data transfer successful! {bundle_size} transferred from {sender_number} to {receiver_number}.")
+                            with open('sms.txt', 'w') as fh:
+                                fh.write(f"Y'ello Transfer of {bundle_size} from {sender_number} to {receiver_number} was successful.\n Dial *312# to buy data ")
+
 
                         else:
                             print('~' * 50)
@@ -478,6 +496,7 @@ def data_trans(sender_number,receiver_number,data_amount=0):
 def buy_friend_data(sender_number, receiver_number, data_amount=0, cost=0, valid_days=1):
     # Calculate expiry date outside the loop
     expiry_date = datetime.date.today() + datetime.timedelta(days=valid_days)
+    expiry_date_time = datetime.datetime.now() + datetime.timedelta(days=valid_days)
 
     try:
         with db.cursor() as my_cur:
@@ -523,6 +542,8 @@ def buy_friend_data(sender_number, receiver_number, data_amount=0, cost=0, valid
                         print(f"You have gifted {bundle_size} @ ₦{cost} valid for {valid_days} day(s) to {receiver_number}.")
                         time.sleep(3)
                         clear()
+                        with open('sms.txt', 'w') as fh:
+                            fh.write(f'Dear customer, Your gifting of {bundle_size} @ ₦{cost} valid for {valid_days} day(s) to {receiver_number} was successful.\nand data expires at {expiry_date_time}  ')
 
                         # Check if data has expired
                         # if data_expire and data_expire < datetime.date.today():
@@ -562,7 +583,8 @@ def borrow_air(phone_number,amount):
             sender_bal = result[0]
 
             if sender_bal <= 49.99:
-                print("\t\t\033[34mY'ello! you are qualified to borrow airtime")
+                print("\t\t\033[34;47;1mY'ello! you are qualified to borrow airtime\033[0m")
+                time.sleep(1)
 
                 sel_bal = 'SELECT Airtime_borrowed_balance FROM Telecom_tbl WHERE Phone_number = %s'
                 my_cur.execute(sel_bal, (phone_number))
@@ -583,6 +605,8 @@ def borrow_air(phone_number,amount):
 
                         wait_and_count()
                         print(f"\033[34;1mY'ello! you have been credited with N{amount} ")
+                        with open('sms.txt', 'w') as fh:
+                            fh.write(f'Dear customer, account has been credited with {amount}.\nDial *312# to rechage balance')
 
                     else:
                         print(f'Pay outstanding debt to continue this process N{borrow_bal}')
@@ -591,7 +615,7 @@ def borrow_air(phone_number,amount):
                     print('No query returned')
 
             else:
-                print("\t\t\033[34mY'ello! you are qualified, but your airtime balance is low. You can borrow airtime or\n\t\tdata when your balance is lower than N49.99 ")
+                print_slowly("\t\t\033[34;1mY'ello! you are qualified, but your airtime balance is high. You can borrow airtime or\n\t\tdata when your balance is lower than N49.99 ")
 
         else:
             print('~' * 50)
@@ -638,7 +662,9 @@ def borrow_mydata(phone_number,data_amount):
                         db.commit()
 
                         wait_and_count()
-                        print(f"\033[34;1mY'ello! you have been credited with {bundle_size} ")
+                        print(f"\033[31;1mY'ello! you have been credited with {bundle_size} ")
+                        with open('sms.txt', 'w') as fh:
+                            fh.write(f'Dear customer,account recharge of {bundle_size} was successful.\nDial *312*1# to buy new active bundle')
 
                     else:
                         print(f'Pay outstanding debt to continue this process {borrow_bal}MB')
@@ -648,7 +674,7 @@ def borrow_mydata(phone_number,data_amount):
                     print('No query returned')
             else:
                 print('~'*50)
-                print("\t\t\033[34mY'ello! you are qualified, but your airtime balance is low. You can borrow airtime or\n\t\tdata when your balance is lower than N49.99 ")
+                print_slowly("\t\t\033[34;1mY'ello! you are qualified, but your airtime balance is high. You can borrow airtime or\n\t\tdata when your balance is lower than N49.99 ")
 
         else:
             print('~'*50)
@@ -662,29 +688,29 @@ def borrow_mydata(phone_number,data_amount):
 def data_plans_subscription():
     wait()
     print('~' * 50)
-    print(' BUY DATA PLANS')
+    print('\t\t\t\033[31;40;3;1mBUY DATA PLANS\033[0m')
     time.sleep(0.6)
-    print('1. Daily Plan')
+    print_slowly('1. Daily Plan')
     time.sleep(0.6)
-    print('2. Weekly Plan')
+    print_slowly('2. Weekly Plan')
     time.sleep(0.6)
-    print('3. Monthly Plan')
+    print_slowly('3. Monthly Plan')
     time.sleep(0.6)
     print('4. 2-3Month Plan ')
     time.sleep(0.6)
-    print('5. Always On Plan')
+    print_slowly('5. Always On Plan')
     time.sleep(0.6)
-    print('6. Hot Deals')
+    print_slowly('6. Hot Deals')
     time.sleep(0.6)
-    print('7. Manage Data')
+    print_slowly('7. Manage Data')
     time.sleep(0.6)
-    print('0. Back')
+    print_slowly('0. Back')
 
 
 def daily_plan():
     wait()
     print('~' * 50)
-    print('\t\t\033[0mDaily Plan\n')
+    print('\t\t\t\033[31;40;3;1mDaily Plan\033[0m\n')
     print('1. 100MB for N100')
     time.sleep(0.6)
     print('2. 200MB for N200')
@@ -695,6 +721,7 @@ def daily_plan():
     time.sleep(0.6)
     print('5. 2GB for N600')
     time.sleep(0.6)
+    print('0. Back')
     print('~' * 50)
     opt = input('\t> ')
 
@@ -798,6 +825,9 @@ def daily_plan():
         else:
             invalid()
 
+    elif opt == '0':
+        dataPlan()
+
     else:
         out()
 
@@ -805,7 +835,7 @@ def daily_plan():
 def weekly_plan():
     wait()
     print('~' * 50)
-    print('\t\tWeekly Plan\n')
+    print('\t\t\t\033[30;47;3;1mWeekly Plan\033[0m\n')
     print('1. N300 for 350MB')
     time.sleep(0.6)
     print('2. N500 for 700MB/7days')
@@ -813,6 +843,8 @@ def weekly_plan():
     print('3. N600 for 1GB')
     time.sleep(0.6)
     print('4. N1000 for 1.5GB')
+    time.sleep(0.6)
+    print('0. Back')
     time.sleep(0.6)
     print('~' * 50)
     option = input('\t> ')
@@ -901,6 +933,9 @@ def weekly_plan():
         else:
             invalid()
 
+    elif option == '0':
+        dataPlan()
+
     else:
         out()
 
@@ -908,7 +943,7 @@ def weekly_plan():
 def monthly_plan():
     wait()
     print('~' * 50)
-    print('\t\tMonthly Plan\n')
+    print('\t\t\t\033[30;42;3;1mMonthly Plan\033[0m\n')
     print('1. N1000 for 1.2GB')
     time.sleep(0.6)
     print('2. N1200 for 1.5GB')
@@ -916,6 +951,8 @@ def monthly_plan():
     print('3. N2000 for 4GB')
     time.sleep(0.6)
     print('4. N3000 for 8GB')
+    time.sleep(0.6)
+    print('0. Back')
     time.sleep(0.6)
     print('~' * 50)
     option = input('\t> ')
@@ -1004,6 +1041,9 @@ def monthly_plan():
         else:
             invalid()
 
+    elif option == '0':
+        dataPlan()
+
     else:
         out()
 
@@ -1011,7 +1051,7 @@ def monthly_plan():
 def _2_3month_plan():
     wait()
     print('~' * 50)
-    print('\t\t2-3 Month Plan\n')
+    print('\t\t\t\033[32;40;3;1m2-3 Month Plan\033[0m\n')
     print('1. N8000 for 30GB/60days')
     time.sleep(0.6)
     print('2. N20000 for 100GB/60days')
@@ -1019,6 +1059,8 @@ def _2_3month_plan():
     print('3. N30000 for 160GB/60days')
     time.sleep(0.6)
     print('4. N50000 for 400GB/90days')
+    time.sleep(0.6)
+    print('0. Back')
     time.sleep(0.6)
     print('~' * 50)
     option = input('\t> ')
@@ -1107,6 +1149,9 @@ def _2_3month_plan():
         else:
             invalid()
 
+    elif option == '0':
+        dataPlan()
+
     else:
         out()
 
@@ -1114,7 +1159,7 @@ def _2_3month_plan():
 def always_on_plan():
     wait()
     print('~' * 50)
-    print('\t\tAlways on Bundle\n')
+    print('\t\t\t\033[91;44;3;1mAlways on Bundle\033[0m\n')
     print('1. N60 for 200MB/24hrs')
     time.sleep(0.6)
     print('2. N120 for 450MB/7days')
@@ -1123,6 +1168,7 @@ def always_on_plan():
     time.sleep(0.6)
     print('4. N6000 for 45GB/30days')
     time.sleep(0.6)
+    print('0. Back')
     print('~' * 50)
     option = input('\t> ')
 
@@ -1209,19 +1255,24 @@ def always_on_plan():
         else:
             invalid()
 
+    elif option == '0':
+        dataPlan()
+
     else:
-        print('Invalid Entry, Please try again')
+        out()
 
 
 def hot_deals_plan():
     wait()
     print('~' * 50)
-    print('\t\tHot Deals Plan\n')
+    print('\t\t\t\033[30;47;3;1mHot Deals Plan\033[0m\n')
     print('1. N500-750MB +500 Talk time/14days')
     time.sleep(0.6)
     print('2. N1000-1.5GB +1000 Talk time/30days')
     time.sleep(0.6)
     print('3. N2000-4.5GB +2000 Talk time/30days')
+    time.sleep(0.6)
+    print('0 back')
     time.sleep(0.6)
     print('~' * 50)
     option = input('\t> ')
@@ -1292,6 +1343,9 @@ def hot_deals_plan():
         else:
             invalid()
 
+    elif option == '0':
+        dataPlan()
+
     else:
         out()
 
@@ -1299,8 +1353,10 @@ def hot_deals_plan():
 def manage_data_plan():
     wait()
     print('~' * 50)
-    print('\t\tManage Data Plan\n')
+    print('\t\t\t\033[32;40;1mManage Data Plan\033[0m\n')
     print('1. VIEW ACTIVE DATA BUNDLE')
+    time.sleep(0.6)
+    print('0. back')
     time.sleep(0.6)
     print('~' * 50)
     option = input('\t> ')
@@ -1321,13 +1377,16 @@ def manage_data_plan():
         else:
             invalid()
 
+    elif option == '0':
+        dataPlan()
+
     else:
         out()
 
 
 # Data plan
 def dataPlan():
-
+    wait()
     data_plans_subscription()
 
     print('~' * 50)
@@ -1389,8 +1448,7 @@ def dataPlan():
         exit()
 
     elif user_result == '0':
-        # cod.main_menu()
-        print()
+        main_menu()
 
     else:
         out()
@@ -1402,12 +1460,14 @@ def whatsapp():
         wait()
         while True:
             print('~' * 50)
-            print("\t\tWhatsapp\n")
+            print("\t\t\t\033[31;40;3;1mWhatsapp\033[0m\n")
             print("1. Daily @ ₦25 for 50MB")
             time.sleep(1)
             print("2. Weekly @ ₦50 for 100MB")
             time.sleep(1)
             print("3. Monthly @ ₦150 for 200MB")
+            time.sleep(1)
+            print('0. back')
             time.sleep(1.5)
             print('~' * 50)
             ans = input("\t> ")
@@ -1480,16 +1540,19 @@ def whatsapp():
                         invalid()
                         break
 
+                elif ans == '0':
+                    social_bundles()
+
                 else:
-                    print("Invalid character. Please try again")
-                    whatsapp()
+                    out()
+                    break
 
         clear()
         print(end='\r')
         print(end='\r')
 
-    except ValueError:
-        print('Oops something went wrong')
+    except Exception as e:
+        print('Oops something went wrong: ',e)
 
 
 # Facebook
@@ -1498,12 +1561,14 @@ def facebook():
         wait()
         while True:
             print('~' * 50)
-            print("\t\tFacebook\n")
+            print("\t\t\t\033[37;40;3;1mFacebook\033[0m\n")
             print("1. Daily @ ₦25 for 50MB")
             time.sleep(1)
             print("2. Weekly @ ₦50 for 100MB")
             time.sleep(1)
             print("3. Monthly @ ₦150 for 250MB")
+            time.sleep(1)
+            print('0. back')
             time.sleep(1.5)
             print('~' * 50)
             ans = input("\t> ")
@@ -1574,14 +1639,18 @@ def facebook():
                     invalid()
                     break
 
+            elif ans == '0':
+                social_bundles()
+
             else:
-                print("Invalid character")
+                out()
+                break
 
         clear()
         print(end='\r')
         print(end='\r')
-    except ValueError:
-        print('Oops something went wrong')
+    except Exception as e:
+        print('Oops something went wrong: ',e)
 
 
 # Instagram
@@ -1590,7 +1659,7 @@ def instagram():
         wait()
         while True:
             print('~' * 50)
-            print("\t\tInstagram\n")
+            print("\t\t\t\033[91;40;1mInstagram\033[0m\n")
             print("1. ₦100 for 250MB/1 day.")
             time.sleep(1)
             print("2. ₦150 for 350MB/2 days.")
@@ -1598,6 +1667,8 @@ def instagram():
             print("3. ₦200 for 1GB/1 day.")
             time.sleep(1)
             print("4. ₦250 for 1.5GB/3-days.")
+            time.sleep(1)
+            print('0. back')
             time.sleep(1.5)
             print('~' * 50)
             ans = input("\t> ")
@@ -1689,14 +1760,18 @@ def instagram():
                     invalid()
                     break
 
+            elif ans == '0':
+                social_bundles()
+
             else:
-                print("Invalid character")
+                out()
+                break
         clear()
         print(end='\r')
         print(end='\r')
 
-    except ValueError:
-        return 'Oops Something went wrong'
+    except Exception as e:
+        print('Oops Something went wrong: ', e)
 
 
 # Tiktok
@@ -1705,7 +1780,7 @@ def tiktok():
         wait()
         while True:
             print('~' * 50)
-            print("\t\tTiktok\n")
+            print("\t\t\t\033[32;40;1mTiktok\033[0m\n")
             print("1. ₦100 for 200MB/1 day.")
             time.sleep(1)
             print("2. ₦150 for 350MB/2 days.")
@@ -1713,6 +1788,8 @@ def tiktok():
             print("3. ₦200 for 1GB/1 day.")
             time.sleep(1)
             print("4. ₦200 for 1.5GB/3-days.")
+            time.sleep(1)
+            print('0. back')
             time.sleep(1.5)
             print('~' * 50)
             ans = input("\t> ")
@@ -1808,17 +1885,23 @@ def tiktok():
                     clear()
                     break
 
+
                 else:
                     invalid()
                     break
 
+            elif ans == '0':
+                social_bundles()
+
             else:
-                print("Invalid character")
+                out()
+                break
         clear()
         print(end='\r')
         print(end='\r')
-    except ValueError:
-        return 'Oops something went wrong'
+
+    except Exception as e:
+        print('Oops something went wrong: ', e)
 
 
 # All Social Media Bundles
@@ -1827,12 +1910,14 @@ def all_social_bundles():
         wait()
         while True:
             print('~' * 50)
-            print("\t\tAll Social Bundles\n")
+            print("\t\t\t\033[91;47;3;1mAll Social Bundles\033[0m\n")
             print("1. Daily @ ₦50 for 150MB.")
             time.sleep(1)
             print("2. Weekly @ ₦100 for 350MB.")
             time.sleep(1)
             print("3. Monthly @ ₦250 for 1GB.")
+            time.sleep(1)
+            print('0. back')
             time.sleep(1.5)
             print('~' * 50)
             ans = input("\t> ")
@@ -1909,14 +1994,18 @@ def all_social_bundles():
                     invalid()
                     break
 
+            elif ans == '0':
+                social_bundles()
+
             else:
-                print("Invalid character")
+                out()
+                break
         clear()
         print(end='\r')
         print(end='\r')
 
-    except ValueError:
-        print('Oops something went wrong')
+    except Exception as e:
+        print('Oops something went wrong: ', e)
 
 
 # YouTube, Instagram and Tiktok
@@ -1925,8 +2014,10 @@ def yit():
         wait()
         while True:
             print('~' * 50)
-            print("\t\tYoutube,Instagram, and TikTok\n")
+            print("\t\t\t\033[31;40;1mYoutube,Instagram, and TikTok\033[0m\n")
             print("1. Daily @ ₦100 for 350MB.")
+            time.sleep(0.6)
+            print('0.back')
             time.sleep(1.5)
             print('~' * 50)
             ans = input("\t> ")
@@ -1955,14 +2046,18 @@ def yit():
                     invalid()
                     break
 
+            elif ans == '0':
+                social_bundles()
+
             else:
-                print("Invalid character")
+                out()
+                break
         clear()
         print(end='\r')
         print(end='\r')
 
-    except ValueError:
-        print('Oops something went wrong')
+    except Exception as e:
+        print('Oops something went wrong: ', e)
 
 
 # Opera Mini and News
@@ -1971,12 +2066,14 @@ def operamini_and_news():
         wait()
         while True:
             print('~' * 50)
-            print("\t\tOpera Mini & News\n")
+            print("\t\t\t\033[30;44;3;1mOpera Mini & News\033[0m\n")
             print("1. ₦20/50MB/1day.")
             time.sleep(1)
             print("2. ₦50/100MB/7days.")
             time.sleep(1)
             print("3. ₦100/500MB/30days.")
+            time.sleep(1)
+            print('0. back')
             time.sleep(1.5)
             print('~' * 50)
             ans = input("\t> ")
@@ -2055,6 +2152,9 @@ def operamini_and_news():
                     invalid()
                     break
 
+            elif ans == '0':
+                social_bundles()
+
             else:
                 out()
                 break
@@ -2063,8 +2163,8 @@ def operamini_and_news():
         print(end='\r')
         print(end='\r')
 
-    except ValueError:
-        print('Oops something went wrong.')
+    except Exception as e:
+        print('Oops something went wrong: ', e)
 
 
 # Social Mega Bundles
@@ -2073,10 +2173,12 @@ def social_mega_bundles():
         wait()
         while True:
             print('~' * 50)
-            print("\t\tSocial Mega Bundles\n")
+            print("\t\t\t\033[91;40;1mSocial Mega Bundles\033[0m\n")
             print("1. 750MB for ₦200 (3 days).")
             time.sleep(1)
             print("2. 1GB for N300 (7 days).")
+            time.sleep(1)
+            print('0. back')
             time.sleep(1.5)
             print('~' * 50)
             ans = input("\t> ")
@@ -2132,6 +2234,9 @@ def social_mega_bundles():
                     invalid()
                     break
 
+            elif ans == '0':
+                social_bundles()
+
             else:
                 out()
                 break
@@ -2148,25 +2253,28 @@ wait()
 
 
 def social_bundles():
+    wait()
     print('~' * 50)
-    print('\t\t\033[32;1mSocial Bundles')
+    print('\t\t\t\033[32;40;1mSocial Bundles\033[0m')
     time.sleep(1)
-    print("1. Whatsapp")
+    print_slowly("1. Whatsapp")
     time.sleep(1)
-    print("2. Facebook")
+    print_slowly("2. Facebook")
     time.sleep(1)
-    print("3. Instagram")
+    print_slowly("3. Instagram")
     time.sleep(1)
-    print("4. Tiktok")
+    print_slowly("4. Tiktok")
     time.sleep(1)
-    print("5. All Social Bundles")
+    print_slowly("5. All Social Bundles")
     time.sleep(1)
-    print("6. Youtube, Instagram, and Tiktok")
+    print_slowly("6. Youtube, Instagram, and Tiktok")
     time.sleep(1)
-    print("7. Opera Mini & News")
+    print_slowly("7. Opera Mini & News")
     time.sleep(1)
-    print("8. Social Mega Bundles")
+    print_slowly("8. Social Mega Bundles")
     time.sleep(1.5)
+    print_slowly('0. Back')
+    time.sleep(1)
     print('~' * 50)
     ask = input("\t> ")
 
@@ -2234,6 +2342,9 @@ def social_bundles():
         time.sleep(1)
         exit()
 
+    elif ask == '0':
+        main_menu()
+
     else:
         out()
         time.sleep(0.5)
@@ -2244,13 +2355,15 @@ def borrow_airtime():
     try:
         wait()
         print('~'*50)
-        print('\t\t\033[34mBorrow Airtime')
+        print('\t\t\t\033[30;47;1mBorrow Airtime\033[0m')
         time.sleep(0.6)
-        print('\033[34m1. N50 ')
+        print('1. N50 ')
         time.sleep(0.6)
-        print('\033[34m2. N100 ')
+        print('2. N100 ')
         time.sleep(0.6)
-        print('\033[34m3. N500')
+        print('3. N500')
+        time.sleep(0.6)
+        print('0. back')
         time.sleep(0.6)
         print('~'*50)
         opt = input('\t> ')
@@ -2303,6 +2416,9 @@ def borrow_airtime():
             else:
                 invalid()
 
+        elif opt == '0':
+            borrow_credit()
+
         else:
             out()
 
@@ -2315,13 +2431,15 @@ def borrow_data():
     try:
         wait()
         print('~' * 50)
-        print('\033[32mBorrow Data')
+        print('\t\t\t\033[32;40;1mBorrow Data\033[0m')
         time.sleep(0.6)
-        print('\033[32m1. 100MB ')
+        print('1. 100MB ')
         time.sleep(0.6)
-        print('\033[32m2. 150MB ')
+        print('2. 150MB ')
         time.sleep(0.6)
-        print('\033[32m3. 500MB')
+        print('3. 500MB')
+        time.sleep(0.6)
+        print('0. back')
         time.sleep(0.6)
         print('~' * 50)
         opt = input('\t> ')
@@ -2374,6 +2492,9 @@ def borrow_data():
             else:
                 invalid()
 
+        elif opt == '0':
+            borrow_credit()
+
         else:
             out()
 
@@ -2383,13 +2504,17 @@ def borrow_data():
 
 # Borrow airtime & Data
 def borrow_credit():
+    wait()
     print('~' * 50)
     time.sleep(0.6)
-    print('\t\t\033[33;1mBorrow credit ')
+    print('\t\t\t\033[30;44;3;1mBorrow credit\033[0m ')
     time.sleep(0.6)
-    print('1.Borrow Airtime')
+    print_slowly('1.Borrow Airtime')
     time.sleep(0.6)
-    print('2. Borrow Data')
+    print_slowly('2. Borrow Data')
+    time.sleep(0.6)
+    print_slowly('0. Back')
+    time.sleep(0.6)
     print('~' * 50)
     opt = input('\t> ')
 
@@ -2398,6 +2523,9 @@ def borrow_credit():
 
     elif opt == '2':
         borrow_data()
+
+    elif opt == '0':
+        main_menu()
 
     else:
         out()
@@ -2408,11 +2536,13 @@ def travel_pass_plan():
     wait()
     while True:
         print('~' * 50)
-        print(" Travel Pass Plan \n")
+        print(" \t\t\t\033[30;47;3;1mTravel Pass Plan\033[0m \n")
         time.sleep(1)
         print("1. 7days(voice) 4000talktime and 100MB @ ₦10,000.")
         time.sleep(1)
         print("2. 7days 1GB Data @ ₦10,000.")
+        time.sleep(1)
+        print('0. back')
         # time.sleep(1)
         # print("3. Inflight Roaming Data.")
         # time.sleep(1)
@@ -2470,6 +2600,9 @@ def travel_pass_plan():
                 invalid()
                 break
 
+        elif ans == '0':
+            roaming_int()
+
         else:
             out()
             break
@@ -2482,7 +2615,7 @@ def data_hybrid():
     wait()
     while True:
         print('~' * 50)
-        print(" \tData Hybrid \n")
+        print(" \t\t\t\033[31;40;1mData Hybrid\033[0m \n")
         time.sleep(1)
         print("1. ₦2,000 for 4GB.")
         time.sleep(1)
@@ -2491,6 +2624,8 @@ def data_hybrid():
         print("3. ₦3,500 for 10GB.")
         time.sleep(1)
         print("4. ₦4,000 for 12GB.")
+        time.sleep(1)
+        print('0. back')
         time.sleep(1.5)
         print('~' * 50)
         ans = input("\t> ")
@@ -2595,6 +2730,9 @@ def data_hybrid():
                 invalid()
                 break
 
+        elif ans == '0':
+            roaming_int()
+
         else:
             out()
             break
@@ -2607,7 +2745,7 @@ def inflight_roaming_data():
     wait()
     while True:
         print('~' * 50)
-        print(" Inflight Roaming Data \n")
+        print(" \t\t\t\033[91;40;3;1mInflight Roaming Data\033[0m \n")
         time.sleep(1)
         print("1. 50MB @ ₦200.")
         time.sleep(1.5)
@@ -2651,13 +2789,15 @@ wait()
 
 def roaming_int():
     while True:
-        print("\t\t\033[36;1mRoaming \n")
+        print("\t\t\t\033[30;47;3;1mRoaming\033[0m \n")
         time.sleep(1)
-        print("1. Travel Pass Plan.")
+        print_slowly("1. Travel Pass Plan.")
         time.sleep(1)
-        print("2. Data Hybrid")
+        print_slowly("2. Data Hybrid")
         time.sleep(1)
-        print("3. Inflight Roaming Data")
+        print_slowly("3. Inflight Roaming Data")
+        time.sleep(1)
+        print_slowly('0. Back')
         time.sleep(1.5)
         print('~' * 50)
         ans = input("\t> ")
@@ -2680,6 +2820,9 @@ def roaming_int():
             time.sleep(1)
             exit()
 
+        elif ans == '0':
+            main_menu()
+
         else:
             out()
             break
@@ -2690,12 +2833,14 @@ def youtube_video_packs():
     wait()
     while True:
         print('~' * 50)
-        print("  YouTube Video Packs\n")
+        print(" \t\t\t\033[91;40;3;1mYouTube Video Packs\033[0m\n")
         print("1. 24 hour @ ₦100 for 800MB.")
         time.sleep(1)
         print("2. 24 hours @ ₦150 for 1.2GB.")
         time.sleep(1)
         print("3. 500MB at ₦50 24 hours.")
+        time.sleep(1)
+        print('0. back')
         time.sleep(1.5)
         print('~' * 50)
         ans = input("\t> ")
@@ -2781,6 +2926,9 @@ def youtube_video_packs():
                 clear()
                 break
 
+        elif ans == '0':
+            video_pack()
+
         else:
             out()
             break
@@ -2792,7 +2940,7 @@ def youtube_only_data_access():
     wait()
     while True:
         print('~' * 50)
-        print("  Youtube Only and Data Access \n")
+        print("\t\t\t\033[32;40;3;1mYoutube Only and Data Access\033[0m\n")
         time.sleep(1)
         print("1. ₦500 for Youtube Plus (1.5GB 2-Weeks Plan).")
         # time.sleep(1)
@@ -2840,11 +2988,13 @@ def buffet_bundle():
     wait()
     while True:
         print('~' * 50)
-        print("\t Buffet Bundle \n")
+        print("\t\t\t\033[34;40;3;1mBuffet Bundle\033[0m \n")
         time.sleep(1)
         print("1. 24 hours(1.3GB) plan for ₦200.")
         time.sleep(1)
         print("2. 24 hours(600MB) plan for ₦100.")
+        time.sleep(1)
+        print('0. back')
         time.sleep(1.5)
         print('~' * 50)
         ans = input("\t> ")
@@ -2902,6 +3052,10 @@ def buffet_bundle():
                 time.sleep(3)
                 clear()
                 break
+
+        elif ans == '0':
+            video_pack()
+
         else:
             out()
             break
@@ -2913,13 +3067,15 @@ def video_pack():
     wait()
     while True:
         print('~' * 50)
-        print("\t \033[31;1mVideo Packs \n")
+        print("\t\t\t\033[31;40;3;1mVideo Packs\033[0m\n")
         time.sleep(1)
-        print("1. Youtube video packs.")
+        print_slowly("1. Youtube video packs.")
         time.sleep(1)
-        print("2. Buffet Bundle: This has a 12hrs & 24 hrs plan")
+        print_slowly("2. Buffet Bundle: This has a 12hrs & 24 hrs plan")
         time.sleep(1)
-        print("3. 1GB(Youtube only) + 500MB (Data access)")
+        print_slowly("3. 1GB(Youtube only) + 500MB (Data access)")
+        time.sleep(1)
+        print_slowly('0. Back')
         time.sleep(1.5)
         print('~' * 50)
         ans = input("\t> ")
@@ -2941,6 +3097,9 @@ def video_pack():
             time.sleep(1)
             exit()
 
+        elif ans == '0':
+            main_menu()
+
         else:
             out()
             break
@@ -2951,21 +3110,21 @@ def data_transfer():
     try:
         wait()
         print('~' * 50)
-        sender_number = input('Please enter your phone number to continue\n\t> ')
+        sender_number = input('\033[1mPlease enter your phone number to continue\003[0m\n\t> ')
         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
         user = my_cur.execute(check_num, (sender_number))
 
         if user:
             wait()
             print('~' * 50)
-            receiver_number = input('Enter receiver phone number\n\t> ')
+            receiver_number = input('\033[1mEnter receiver phone number\033[0m\n\t> ')
             check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
             user = my_cur.execute(check_num, (receiver_number))
 
             if user:
                 wait()
                 print('~'*50)
-                data_amount = input('Enter data amount \n\t> ')
+                data_amount = input('\033[1mEnter data amount\033[0m\n\t> ')
                 print('~' * 50)
 
                 if data_amount.isnumeric():
@@ -2984,7 +3143,7 @@ def data_transfer():
                         clear()
 
                     else:
-                        print("Can't make transfer more than 2000MB ")
+                        print("\033[31;3;1mCan't make transfer more than 2000MB ")
                         time.sleep(0.7)
                         print('Service time out')
 
@@ -3009,44 +3168,44 @@ def buy_friend():
     try:
         wait()
         print('~' * 50)
-        sender_number = input('Please enter your phone number to continue\n\t> ')
+        sender_number = input('\033[1mPlease enter your phone number to continue\033[0m\n\t> ')
         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
         user = my_cur.execute(check_num, (sender_number))
 
         if user:
             wait()
             print('~'*50)
-            print('\tWelcome to our gifting service.Select data plan to gift.')
+            print('\t\t\t\033[31;40;3;1mWelcome to our gifting service.Select data plan to gift.\033[0m')
             time.sleep(0.6)
-            print('1. Data Plans')
+            print_slowly('1. Data Plans')
             time.sleep(0.6)
-            print('2. Social Bundles')
+            print_slowly('2. Social Bundles')
             time.sleep(0.6)
-            print('3. Video Pack')
+            print_slowly('3. Video Pack')
             time.sleep(0.6)
-            print('0. Back')
+            print_slowly('0. Back')
             print('~' * 50)
             opt = input('\t> ')
 
             if opt == '1':
                 wait()
                 print('~'*50)
-                print(' BUY DATA PLANS')
+                print('\t\t\t\033[32;3;40;1mBUY DATA PLANS\033[0m')
                 time.sleep(0.6)
-                print('1. Daily Plan')
+                print_slowly('1. Daily Plan')
                 time.sleep(0.6)
-                print('2. Weekly Plan')
+                print_slowly('2. Weekly Plan')
                 time.sleep(0.6)
-                print('3. Monthly Plan')
+                print_slowly('3. Monthly Plan')
                 time.sleep(0.6)
-                print('4. 2-3Month Plan ')
+                print_slowly('4. 2-3Month Plan ')
                 print('~' * 50)
                 ans = input('\t> ')
 
                 if ans == '1':
                     wait()
                     print('~' * 50)
-                    print('\t\tDaily Plan\n')
+                    print('\t\t\t\033[31;3;40;1mDaily Plan\033[0m\n')
                     print('1. 100MB for N100')
                     time.sleep(0.6)
                     print('2. 200MB for N200')
@@ -3059,7 +3218,7 @@ def buy_friend():
 
                     if res == '1':
                         print('~'*50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3080,7 +3239,7 @@ def buy_friend():
 
                     elif res == '2':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m\n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3101,7 +3260,7 @@ def buy_friend():
 
                     elif res == '3':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m\n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3122,7 +3281,7 @@ def buy_friend():
 
                     elif res == '4':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3147,7 +3306,7 @@ def buy_friend():
                 elif ans == '2':
                     wait()
                     print('~' * 50)
-                    print('\t\tWeekly Plan\n')
+                    print('\t\t\t\033[;3;47;30;1mWeekly Plan\033[0m\n')
                     print('1. N300 for 350MB')
                     time.sleep(0.6)
                     print('2. N500 for 700MB/7days')
@@ -3161,7 +3320,7 @@ def buy_friend():
 
                     if res == '1':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3183,7 +3342,7 @@ def buy_friend():
 
                     elif res == '2':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3205,7 +3364,7 @@ def buy_friend():
 
                     elif res == '3':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3227,7 +3386,7 @@ def buy_friend():
 
                     elif res == '4':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3250,7 +3409,7 @@ def buy_friend():
                 elif ans == '3':
                     wait()
                     print('~' * 50)
-                    print('\t\tMonthly Plan\n')
+                    print('\t\t\t\033[31;40;3;1mMonthly Plan\033[0m\n')
                     print('1. N1000 for 1.2GB')
                     time.sleep(0.6)
                     print('2. N1200 for 1.5GB')
@@ -3264,7 +3423,7 @@ def buy_friend():
 
                     if res == '1':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3286,7 +3445,7 @@ def buy_friend():
 
                     elif res == '2':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3308,7 +3467,7 @@ def buy_friend():
 
                     elif res == '3':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3330,7 +3489,7 @@ def buy_friend():
 
                     elif res == '4':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3353,7 +3512,7 @@ def buy_friend():
                 elif ans == '4':
                     wait()
                     print('~' * 50)
-                    print('\t\t2-3 Month Plan\n')
+                    print('\t\t\t\033[34;3;40;1m2-3 Month Plan\033[0m\n')
                     print('1. N8000 for 30GB/60days')
                     time.sleep(0.6)
                     print('2. N20000 for 100GB/60days')
@@ -3367,7 +3526,7 @@ def buy_friend():
 
                     if res == '1':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3389,7 +3548,7 @@ def buy_friend():
 
                     elif res == '2':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3411,7 +3570,7 @@ def buy_friend():
 
                     elif res == '3':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3433,7 +3592,7 @@ def buy_friend():
 
                     elif res == '4':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3460,22 +3619,28 @@ def buy_friend():
                     out()
 
             elif opt == '2':
+                wait()
                 print('~' * 50)
-                print('Social Bundles')
+                print()
+                print('\t\t\t\033[31;3;40;1mSocial Bundles\033[0m')
                 time.sleep(1)
-                print("1. Whatsapp")
+                print_slowly("1. Whatsapp")
                 time.sleep(1)
-                print("2. Facebook")
+                print_slowly("2. Facebook")
                 time.sleep(1)
-                print("3. Instagram")
+                print_slowly("3. Instagram")
                 time.sleep(1)
-                print("4. Tiktok")
+                print_slowly("4. Tiktok")
+                time.sleep(1)
+                print_slowly('0.Back')
                 time.sleep(1)
                 ask = input('\t> ')
 
                 if ask == '1':
+                    wait()
                     print('~' * 50)
-                    print("\t\tWhatsapp\n")
+                    print()
+                    print("\t\t\t\033[30;3;47;1mWhatsapp\033[0m\n")
                     print("1. Daily @ ₦25 for 50MB")
                     time.sleep(1)
                     print("2. Weekly @ ₦50 for 100MB")
@@ -3487,7 +3652,7 @@ def buy_friend():
 
                     if ans == '1':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3508,7 +3673,7 @@ def buy_friend():
 
                     elif ans == '2':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3530,7 +3695,7 @@ def buy_friend():
 
                     elif ans == '3':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3554,8 +3719,9 @@ def buy_friend():
                         out()
 
                 elif ask == '2':
+                    wait()
                     print('~' * 50)
-                    print("\t\tFacebook\n")
+                    print("\t\t\t\033[3;32;40;1mFacebook\033[0m\n")
                     print("1. Daily @ ₦25 for 50MB")
                     time.sleep(1)
                     print("2. Weekly @ ₦50 for 100MB")
@@ -3567,7 +3733,7 @@ def buy_friend():
 
                     if ans == '1':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3588,7 +3754,7 @@ def buy_friend():
 
                     elif ans == '2':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3610,7 +3776,7 @@ def buy_friend():
 
                     elif ans == '3':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3634,8 +3800,10 @@ def buy_friend():
                         out()
 
                 elif ask == '3':
+                    wait()
                     print('~' * 50)
-                    print("\t\tInstagram\n")
+                    print()
+                    print("\t\t\t\033[31;40;3;1mInstagram\033[0m\n")
                     print("1. ₦100 for 250MB/1 day.")
                     time.sleep(1)
                     print("2. ₦150 for 350MB/2 days.")
@@ -3649,7 +3817,7 @@ def buy_friend():
 
                     if ans == '1':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3670,7 +3838,7 @@ def buy_friend():
 
                     elif ans == '2':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3692,7 +3860,7 @@ def buy_friend():
 
                     elif ans == '3':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3713,7 +3881,7 @@ def buy_friend():
 
                     elif ans == '4':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3737,8 +3905,10 @@ def buy_friend():
                         out()
 
                 elif ask == '4':
+                    wait()
                     print('~' * 50)
-                    print("\t\tTiktok\n")
+                    print()
+                    print("\t\t\t\033[30;47;3;1mTiktok\033[0m\n")
                     print("1. ₦100 for 200MB/1 day.")
                     time.sleep(1)
                     print("2. ₦150 for 350MB/2 days.")
@@ -3752,7 +3922,7 @@ def buy_friend():
 
                     if ans == '1':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3773,7 +3943,7 @@ def buy_friend():
 
                     elif ans == '2':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3795,7 +3965,7 @@ def buy_friend():
 
                     elif ans == '3':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3816,7 +3986,7 @@ def buy_friend():
 
                     elif ans == '4':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3839,20 +4009,27 @@ def buy_friend():
                     else:
                         out()
 
+                elif ask == '0':
+                    buy_friend()
+
                 else:
                     out()
 
             elif opt == '3':
+                wait()
                 print('~' * 50)
-                print("\t Video Packs \n")
+                print()
+                print("\t\t\t\033[32;3;40;1m Video Packs\033[0m \n")
                 time.sleep(0.6)
                 print("1. Youtube video packs.")
                 time.sleep(0.6)
                 ans = input('\t> ')
 
                 if ans == '1':
+                    wait()
                     print('~' * 50)
-                    print("  YouTube Video Packs\n")
+                    print()
+                    print(" \t\t\t\033[31;3;40;1mYouTube Video Packs\033[0m\n")
                     print("1. 24 hour @ ₦100 for 800MB.")
                     time.sleep(1)
                     print("2. 24 hours @ ₦150 for 1.2GB.")
@@ -3864,7 +4041,7 @@ def buy_friend():
 
                     if ask == '1':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3885,7 +4062,7 @@ def buy_friend():
 
                     elif ask == '2':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3906,7 +4083,7 @@ def buy_friend():
 
                     elif ask == '3':
                         print('~' * 50)
-                        receiver_number = input("Enter recipient's number \n\t> ")
+                        receiver_number = input("\033[1mEnter recipient's number\033[0m \n\t> ")
                         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
                         user = my_cur.execute(check_num, (receiver_number))
 
@@ -3931,6 +4108,9 @@ def buy_friend():
                 else:
                     out()
 
+            elif opt == '0':
+                buy_friend()
+
             else:
                 out()
 
@@ -3943,14 +4123,17 @@ def buy_friend():
 
 # GIFT DATA
 def gift_data():
+    wait()
     print('~' * 50)
-    print('\t\t\033[35;1mGift Data')
+    print('\t\t\033[91;44;3;1mGift Data\033[0m')
     time.sleep(0.6)
-    print('1.Transfer from data balance')
+    print_slowly('1.Transfer from data balance')
     time.sleep(0.6)
-    print('2.Buy for a friend')
+    print_slowly('2.Buy for a friend')
     time.sleep(0.6)
-    print('~' * 50)
+    print_slowly('0. Back')
+    time.sleep(0.6)
+    print_slowly('~' * 50)
     opt = input('\t> ')
 
     if opt == '1':
@@ -3959,39 +4142,70 @@ def gift_data():
     elif opt == '2':
         buy_friend()
 
+    elif opt == '0':
+        main_menu()
+
     else:
         out()
 
 
 def chat_zigi():
-    print('~'*50)
+    wait()
+    print('~'*100)
     time.sleep(0.7)
-    message = '''\033[31;1m\t\t\t\tChat with Zigi on preferred network such
+    message = '''\033[31;3;1m\t\t\t\tChat with Zigi on preferred network such
                    \tas;whatsapp,facebook messenger
-                   Web and Telegram.Details via sms.
+                   Web and Telegram.Details via sms.\033[0m
                    '''
     return message
 
+
+def check_data():
+    try:
+        wait()
+        print('~'*50)
+        phone_number = input('\033[31;1;3mPlease enter phone number\033[0m\n\t> ')
+        check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
+        user = my_cur.execute(check_num, (phone_number))
+        if user:
+            wait_and_count()
+            checkDataBal(phone_number)
+
+            print(end='\r')
+            print(end='\r')
+            time.sleep(1)
+            clear()
+
+        else:
+            invalid()
+
+    except Exception as e:
+        print('Oops something went wrong: ', e)
+
+
 # menu function
 def main_menu():
+    wait()
     print('~' * 50)
-    print("Welcome to our USSD Service.")
+    print()
+    print("\t\t\t\033[32;107;40;3;1mWelcome to our USSD Service.\033[0m")
     time.sleep(1)  # Wait for 1 second
-    print('1. Data Plan')
+    print_slowly('\033[3;1m1. Data Plan')
     time.sleep(1)  # Wait for 1 second
-    print('2. Social Bundles')
+    print_slowly('2. Social Bundles')
     time.sleep(1)  # Wait for 1 second
-    print('3. Borrow Credit')
+    print_slowly('3. Borrow Credit')
     time.sleep(1)  # Wait for 1 second
-    print("4. Roaming\\int'l")
+    print_slowly("4. Roaming\\int'l")
     time.sleep(1)  # Wait for 1 second
-    print('5. Video Pack')
+    print_slowly('5. Video Pack')
     time.sleep(1)  # Wait for 1 second
-    print('6. Gift data')
+    print_slowly('6. Gift data')
     time.sleep(1)  # Wait for 1 second
-    print('7. Recharge Airtime')
+    print_slowly('7. Recharge Airtime')
     time.sleep(1)  # Wait for 1 second
-    print('8. Chat with Zigi')
+    print_slowly('8. Chat with Zigi\033[0m')
+    print()
     print('~' * 50)
     menu = input('\t>>> ')
 
@@ -4017,7 +4231,7 @@ def main_menu():
         recharge()
 
     elif menu == '8':
-        print(chat_zigi())
+        print_slowly(chat_zigi())
 
     else:
         print('Invalid Entry\nTry again\n')
@@ -4026,10 +4240,24 @@ def main_menu():
 
 # ussd function
 def ussd_code():
+    print()
     print('~' * 50)
-    ussd = input('Enter ussd\n\t>>> ')
+    ussd = input('\033[1mEnter ussd\033[0m\n\t>>> ')
+
     if ussd == '*312#':
         main_menu()
+
+    elif ussd == '*312*1#':
+        dataPlan()
+
+    elif ussd == '*312*2#':
+        social_bundles()
+
+    elif ussd == '*312*7#':
+        recharge()
+
+    elif ussd == '*310#':
+        check_data()
 
     else:
         print('~' * 50)
