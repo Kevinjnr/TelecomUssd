@@ -77,9 +77,11 @@ Main Functions
 - option(): Main menu that prompts the user to either register a new number or verify an existing one.
 
 Error Handling
+
 The script includes basic error handling to manage invalid inputs and database connection issues.
 
 Conclusion
+ 
 This script provides a basic simulation of a telecom service's registration and airtime recharge functionality. 
 It demonstrates handling user input, generating random phone numbers, interacting with a MySQL database, and
 creating a simple user interface through the console.    

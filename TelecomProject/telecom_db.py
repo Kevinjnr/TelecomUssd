@@ -1,5 +1,4 @@
 import random
-
 from telussd import *
 
 
@@ -33,6 +32,7 @@ def print_slowly(text):
     print()  # Print a newline at the end
 
 
+# recharge during registration code
 def re_charge():
     global airtime_balance
     print('~' * 50)
@@ -50,16 +50,16 @@ def register_num():
     global airtime_balance
     print('~' * 50)
     print()
-    print_slowly('\033[34mWelcome!')
+    print_slowly('\033[34;3;1mWelcome!')
     time.sleep(1)
-    print_slowly('\033[34mPlease register your sim with us\033[0m')
+    print_slowly('\033[34;3;1mPlease register your sim with us\033[0m')
     print()
     time.sleep(2)
     # Creating an empty list
     _list = []
     while True:
         print('~' * 50)
-        first_name = str(input('Enter first name\n\t>>> ')).capitalize()
+        first_name = str(input('\033[1;3mEnter first name\n\t>>> ')).capitalize()
         if first_name.isalpha():
             break
         time.sleep(0.5)
@@ -73,10 +73,10 @@ def register_num():
             break
         time.sleep(0.5)
         print('~' * 50)
-        print('Last name is required and must contain only alphabetic characters. Please try again.')
+        print('Last name is required and must contain only alphabetic characters. Please try again.\033[0m')
         time.sleep(1)
 
-    #Error handling
+    # Error handling
     try:
         re_charge()
         gen_number()
@@ -92,14 +92,16 @@ def register_num():
         time.sleep(1)
         print()
         print('~' * 50)
-        print_slowly('Registration successful')
+        print()
+        print_slowly('\033[34;3;1mRegistration successful')
         time.sleep(2)
         print_slowly(f'Hello!, {full_name} Thank you for registering with us.')
         time.sleep(1)
-        print_slowly(f'Phone number: {sp_details[-1]}')
+        print_slowly(f'Phone number: {sp_details[-1]}\033[0m')
         time.sleep(1)
         print()
-        print_slowly(f'Account has been credited with N{airtime_balance}\nAcct.bal:{airtime_balance} ')
+        print_slowly(f'\033[32;3;1mAccount has been credited with N{airtime_balance}\nAcct.bal:{airtime_balance}\033[0m ')
+        time.sleep(1)
 
         # Sql insert query
         insert_dt = 'INSERT INTO telecom_tbl(first_name,last_name,phone_number,airtime_balance) VALUES (%s,%s,%s,%s)'
@@ -113,22 +115,22 @@ def register_num():
 
         print('~' * 50)
         print('1. Continue')
-        time.sleep(0.3)
+        time.sleep(0.7)
         print('2. Cancel')
-        time.sleep(0.3)
+        time.sleep(0.7)
         print('~' * 50)
         opt = input('\t> ')
 
         if opt == '1':
             time.sleep(2)
             print('~' * 50)
-            print_slowly('Welcome to our service')
+            print_slowly('\033[32;3;1mWelcome to our service\033[0m')
             time.sleep(1)
             return ussd_code()
 
         elif opt == '2':
             print()
-            print_slowly('Thank you for using our service')
+            print_slowly('\033[31;1;3mThank you for using our service')
             time.sleep(1)
 
         else:
@@ -195,11 +197,10 @@ def already_user():
 
 # Function to ask a user if they already have their number registered to the db or not
 def option():
-    print()
-    print('~' * 50)
     print_slowly('\t\t\033[31;107;3;1mWelcome to our service\033[0m')
     time.sleep(1)
-    print_slowly('\033[31;1mWould you like to:')
+    print()
+    print_slowly('\033[31;3;1mWould you like to:')
     time.sleep(1)
     print()
     print_slowly('1. Register number')
@@ -223,7 +224,7 @@ def option():
         else:
             time.sleep(1)
             print('~' * 50)
-            print('Invalid Response. Please try again')
+            print('\033[1mInvalid Response. Please try again')
             time.sleep(0.5)
 
 
