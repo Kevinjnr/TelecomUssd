@@ -1,4 +1,5 @@
-			TELECOM SERVICE SIMULATION
+with open('../README.md', 'w') as fh:
+    fh.write('''\t\t\tTELECOM SERVICE SIMULATION
     
 This Python script simulates a simple telecom service where users can register their phone numbers, recharge their airtime balance, 
 and interact with the service through a basic menu. The script performs various operations including generating phone numbers, 
@@ -16,7 +17,7 @@ Features
     -Successful registration stores user details in a MySQL database.
     
 3. Airtime Recharge:
-    -Users can enter an amount to recharge their airtime balance.
+    -Users can enter an amount to recharge their airtime balance and also buy data.
     -The input is validated to ensure it is numeric.
     
 4. Existing User Verification:
@@ -33,14 +34,13 @@ Setup
 Prerequisites
 - Python 3.x
 - MySQL Server
-- Required Python packages: pymysql, random, time
+- Required Python packages: pymysql, random, time,datetime,os,sys,decimal,pyttsx3
     
 Installation
 1. Clone the repository or download the script file.
 2. Install the required Python packages:
             -pip install pymysql
-3. Set up your MySQL database and create a table named telecom_tbl with the following structure:
-
+3. Set up your MySQL database and create a table named telecom_tbl with the following structure:\n
 
                             CREATE TABLE telecom_tbl (
                             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -50,8 +50,7 @@ Installation
                             airtime_balance DECIMAL 
                         );
                         
-4. Update the database connection details in the script:
-
+4. Update the database connection details in the script:\n
                             db = pymysql.connect(
                             user='your_db_user',
                             password='your_db_password',
@@ -82,8 +81,9 @@ Error Handling
 The script includes basic error handling to manage invalid inputs and database connection issues.
 
 Conclusion
-
+ 
 This script provides a basic simulation of a telecom service's registration and airtime recharge functionality. 
 It demonstrates handling user input, generating random phone numbers, interacting with a MySQL database, and
 creating a simple user interface through the console.    
     
+''')

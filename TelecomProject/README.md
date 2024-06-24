@@ -1,5 +1,4 @@
-with open('Readme.md','w') as fh:
-    fh.write('''\t\t\tTELECOM SERVICE SIMULATION
+			TELECOM SERVICE SIMULATION
     
 This Python script simulates a simple telecom service where users can register their phone numbers, recharge their airtime balance, 
 and interact with the service through a basic menu. The script performs various operations including generating phone numbers, 
@@ -34,13 +33,14 @@ Setup
 Prerequisites
 - Python 3.x
 - MySQL Server
-- Required Python packages: pymysql, random, time
+- Required Python packages: pymysql, random, time,datetime,os,sys,decimal,pyttsx3
     
 Installation
 1. Clone the repository or download the script file.
 2. Install the required Python packages:
             -pip install pymysql
-3. Set up your MySQL database and create a table named telecom_tbl with the following structure:\n
+3. Set up your MySQL database and create a table named telecom_tbl with the following structure:
+
 
                             CREATE TABLE telecom_tbl (
                             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -50,7 +50,8 @@ Installation
                             airtime_balance DECIMAL 
                         );
                         
-4. Update the database connection details in the script:\n
+4. Update the database connection details in the script:
+
                             db = pymysql.connect(
                             user='your_db_user',
                             password='your_db_password',
@@ -86,4 +87,3 @@ This script provides a basic simulation of a telecom service's registration and 
 It demonstrates handling user input, generating random phone numbers, interacting with a MySQL database, and
 creating a simple user interface through the console.    
     
-''')

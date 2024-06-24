@@ -2,6 +2,9 @@ import random
 from telussd import *
 
 
+engine = pyttsx3.init()
+
+
 db = pymysql.connect(
     user='vicjnr',
     password='kevjnr7890',
@@ -50,8 +53,12 @@ def register_num():
     global airtime_balance
     print('~' * 50)
     print()
+    engine.say("Welcome")
+    engine.runAndWait()
     print_slowly('\033[34;3;1mWelcome!')
-    time.sleep(1)
+    time.sleep(0.3)
+    engine.say("Please register your sim with us")
+    engine.runAndWait()
     print_slowly('\033[34;3;1mPlease register your sim with us\033[0m')
     print()
     time.sleep(2)
@@ -59,20 +66,28 @@ def register_num():
     _list = []
     while True:
         print('~' * 50)
+        engine.say("Enter first name")
+        engine.runAndWait()
         first_name = str(input('\033[1;3mEnter first name\n\t>>> ')).capitalize()
         if first_name.isalpha():
             break
         time.sleep(0.5)
         print('~' * 50)
+        engine.say("First name is required and must contain only alphabetic characters. Please try again.")
+        engine.runAndWait()
         print('First name is required and must contain only alphabetic characters. Please try again.')
         time.sleep(1)
     while True:
         print('~' * 50)
+        engine.say("Enter last name.")
+        engine.runAndWait()
         last_name = str(input('Enter last name\n\t>>> ')).capitalize()
         if last_name.isalpha():
             break
         time.sleep(0.5)
         print('~' * 50)
+        engine.say("Last name is required and must contain only alphabetic characters. Please try again.")
+        engine.runAndWait()
         print('Last name is required and must contain only alphabetic characters. Please try again.\033[0m')
         time.sleep(1)
 
@@ -93,13 +108,21 @@ def register_num():
         print()
         print('~' * 50)
         print()
-        print_slowly('\033[34;3;1mRegistration successful')
+        engine.say("Registration successful.")
+        engine.runAndWait()
+        print_slowly('\033[34;3;1mRegistration successful!')
         time.sleep(2)
+        engine.say(f"Hello!, {full_name} Thank you for registering with us..")
+        engine.runAndWait()
         print_slowly(f'Hello!, {full_name} Thank you for registering with us.')
         time.sleep(1)
+        engine.say(f'Phone number: {sp_details[-1]}')
+        engine.runAndWait()
         print_slowly(f'Phone number: {sp_details[-1]}\033[0m')
         time.sleep(1)
         print()
+        engine.say(f'Account has been credited with {airtime_balance}naira\nAccount balance:{airtime_balance}naira')
+        engine.runAndWait()
         print_slowly(f'\033[32;3;1mAccount has been credited with N{airtime_balance}\nAcct.bal:{airtime_balance}\033[0m ')
         time.sleep(1)
 
@@ -114,8 +137,12 @@ def register_num():
         db.close()
 
         print('~' * 50)
+        engine.say("Press 1 to Continue this process.")
+        engine.runAndWait()
         print('1. Continue')
         time.sleep(0.7)
+        engine.say("press 2 to Cancel.")
+        engine.runAndWait()
         print('2. Cancel')
         time.sleep(0.7)
         print('~' * 50)
@@ -124,20 +151,30 @@ def register_num():
         if opt == '1':
             time.sleep(2)
             print('~' * 50)
+            print()
+            engine.say("Welcome to our service.")
+            engine.runAndWait()
             print_slowly('\033[32;3;1mWelcome to our service\033[0m')
             time.sleep(1)
             return ussd_code()
 
         elif opt == '2':
             print()
+            print()
+            engine.say("Thank you for using our service.")
+            engine.runAndWait()
             print_slowly('\033[31;1;3mThank you for using our service')
             time.sleep(1)
 
         else:
+            engine.say("Invalid Entry. Service time out.")
+            engine.runAndWait()
             print('Invalid Entry. Service time out')
 
     except Exception as e:
         print('~' * 50)
+        engine.say("Sim registration failed:")
+        engine.runAndWait()
         print('Sim registration failed: ',e)
 
 
@@ -145,7 +182,9 @@ def register_num():
 def already_user():
     print('~' * 50)
     print()
-    phone_number = input('\033[32mEnter phone number\n\t>>> ')
+    engine.say("Enter phone number:")
+    engine.runAndWait()
+    phone_number = input('\033[32;1;3mEnter phone number\033[0m\n\t>>> ')
 
     try:
         # Query to check if number already exists in db
@@ -159,13 +198,19 @@ def already_user():
                 wait()
                 print('~' * 50)
                 print()
+                engine.say("press 1 to Continue this process")
+                engine.runAndWait()
                 print_slowly('1. Continue')
+                engine.say("press 2 to cancel this process")
+                engine.runAndWait()
                 print_slowly('2. Cancel')
                 print('~' * 50)
                 res = input('\t>>> ')
                 if res == '1' and res.isnumeric():
                     wait_and_count()
                     print('~' * 50)
+                    engine.say("Welcome to our service")
+                    engine.runAndWait()
                     print('Welcome to our service')
                     wait()
                     ussd_code()
@@ -174,37 +219,56 @@ def already_user():
                 elif res == '2' and res.isnumeric():
                     print()
                     print('~' * 50)
+                    engine.say("Thank you for using our service")
+                    engine.runAndWait()
                     print('Thank you for using our service')
                     break
 
                 else:
                     print()
                     print('~' * 50)
+                    engine.say("invalid response. Please try again.")
+                    engine.runAndWait()
                     print('Invalid response. Please try again')
                     time.sleep(0.5)
+                    engine.say("Service time out")
+                    engine.runAndWait()
                     print('Service time out')
 
             else:
                 print()
                 print('~' * 50)
+                engine.say("invalid number. Please register your number to continue this process")
+                engine.runAndWait()
                 print('Invalid number\nPlease register your number to continue this process')
                 break
 
     except Exception as e:
         print('~' * 50)
+        engine.say("An error occurred")
+        engine.runAndWait()
         print(f"An error occurred: {e}")
 
 
 # Function to ask a user if they already have their number registered to the db or not
 def option():
+    engine.say("Welcome to our service")
+    engine.runAndWait()
+    print()
     print_slowly('\t\t\033[31;107;3;1mWelcome to our service\033[0m')
-    time.sleep(1)
+    time.sleep(0.3)
     print()
+    engine.say("Would you like to: ")
+    engine.runAndWait()
     print_slowly('\033[31;3;1mWould you like to:')
-    time.sleep(1)
+    time.sleep(0.3)
     print()
+    engine.say("1. Register number")
+    engine.runAndWait()
     print_slowly('1. Register number')
-    time.sleep(0.8)
+    time.sleep(0.3)
+    engine.say("2. User")
+    engine.runAndWait()
     print_slowly('2. User\033[0m')
 
     while True:
