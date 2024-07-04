@@ -10,35 +10,46 @@ Features
     - The script generates a random Nigerian phone number starting with one of the common prefixes (080, 070, 090, 081).
 
 2. User Registration:
-    -First-time users are prompted to register their phone numbers.
-    -Users enter their first and last names, and an initial airtime balance.
-    -The entered data is validated to ensure correctness (e.g., names must contain only alphabetic characters).
-    -Successful registration stores user details in a MySQL database.
+    - First-time users are prompted to register their phone numbers.
+    - Users enter their first and last names, and an initial airtime balance.
+    - The entered data is validated to ensure correctness (e.g., names must contain only alphabetic characters).
+    - Successful registration stores user details in a MySQL database.
     
 3. Airtime Recharge:
-    -Users can enter an amount to recharge their airtime balance.
-    -The input is validated to ensure it is numeric.
+    - Users can enter an amount to recharge their airtime balance and also buy data.
+    - The input is validated to ensure it is numeric.
     
 4. Existing User Verification:
-    -The script checks if a user's phone number is already registered in the database.
-    -If the number exists, the user can continue to interact with the service.
+    - The script checks if a user's phone number is already registered in the database.
+    - If the number exists, the user can continue to interact with the service.
     
 5. User Interaction:
     - Users interact with the service through a simple menu system.
     - The script uses functions to display messages slowly for a better user experience.
+
+6. USSD Menu: 
+    - Access various services through a simulated USSD menu.
     
+7. Text-to-Speech:
+    - Uses `pyttsx3` to provide auditory feedback to users.
+    
+8. Database Integration:
+    - Stores user details and airtime balance in a MySQL database.
+    
+9. Notifications:
+    - Sends notifications (simulated).    
     
 Setup
 
 Prerequisites
 - Python 3.x
 - MySQL Server
-- Required Python packages: pymysql, random, time,datetime,os,sys,decimal,pyttsx3
+- Required Python packages: pymysql, random, time,datetime,os,sys,decimal,pyttsx3,plyer
     
 Installation
 1. Clone the repository or download the script file.
 2. Install the required Python packages:
-            -pip install pymysql
+   - pip install pymysql
 3. Set up your MySQL database and create a table named telecom_tbl with the following structure:
 
 
@@ -65,7 +76,11 @@ Usage
 2. Follow the on-screen prompts to register a new number or verify an existing one.
 3. Enter your details as requested to complete the registration or access the service.
 
-Code Overview
+Code Structure
+- main.py: Entry point of the application.
+- TelecomProject/: Contains the main menu, USSD shortcodes, and other functionalities.
+- animation/colors.py: Contains color codes and animations for the console output.
+- notification.py: Simulates sending notifications.
 
 
 Main Functions
@@ -80,6 +95,10 @@ Main Functions
 Error Handling
 
 The script includes basic error handling to manage invalid inputs and database connection issues.
+
+Contributing
+
+Feel free to submit pull requests and report issues. Contributions are welcome!
 
 Conclusion
  

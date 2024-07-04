@@ -1,9 +1,17 @@
 import random
-from telussd import *
-
+import pymysql
+import time
+import sys
+import os
+import pyttsx3
+import datetime
+from TelecomProject.main_menu import ussd_code
+from TelecomProject.ussd_short import wait, wait_and_count, clear, print_slowly, countdown_timer
+from animation.colors import *
+from TelecomProject.notification import send_notification
+import re
 
 engine = pyttsx3.init()
-
 
 db = pymysql.connect(
     user='vicjnr',
@@ -21,75 +29,75 @@ airtime_balance = ''
 # Generate user phone number
 def gen_number():
     global phone_number
-    fnum = random.choice(['080','070','090','081'])
+    fnum = random.choice(['080', '070', '090', '081'])
 
     last_num = ''.join([str(random.randint(0, 9)) for _ in range(8)]).strip()
     phone_number = fnum + last_num
     return phone_number
 
 
-def print_slowly(text):
-    for char in text:
-        print(char, end='', flush=True)  # Print without newline and flush the output
-        time.sleep(0.05)  # Adjust the delay (in seconds) as desired
-    print()  # Print a newline at the end
-
-
 # recharge during registration code
 def re_charge():
     global airtime_balance
-    print('~' * 50)
-    airtime_balance = input('Enter amount to recharge\n\t>>> ')
+    print(f'{brt_yellow}\nEnter amount to recharge:{end} ')
+    print('~~~~~~~~~~~~~~~~~~~~~~~')
+    airtime_balance = input('>>> ').strip()
     if airtime_balance.isnumeric():
         pass
     else:
-        print('~' * 50)
-        print('Invalid Entry. Please enter a numeric value')
+        print(f'{brt_red}::Invalid Entry. Please enter a numeric value{end}')
         re_charge()
 
 
 # prompt first time user's to register their number
 def register_num():
-    global airtime_balance
-    print('~' * 50)
+    global airtime_balance, first_name
     print()
     engine.say("Welcome")
     engine.runAndWait()
-    print_slowly('\033[34;3;1mWelcome!')
+    print_slowly(f'{brt_yellow}{bold}Welcome!{end}')
     time.sleep(0.3)
-    engine.say("Please register your sim with us")
+    engine.say("Please kindly register your number here by filling the following question")
     engine.runAndWait()
-    print_slowly('\033[34;3;1mPlease register your sim with us\033[0m')
-    print()
+    print_slowly(f'{brt_yellow}{bold}Please kindly register your number here by filling the following question{end}\n')
     time.sleep(2)
     # Creating an empty list
     _list = []
     while True:
-        print('~' * 50)
-        engine.say("Enter first name")
+        engine.say("\nEnter first name")
         engine.runAndWait()
-        first_name = str(input('\033[1;3mEnter first name\n\t>>> ')).capitalize()
+        print(f'{brt_yellow}Enter first name:{end} ')
+        print('~~~~~~~~~~~~~~~~~')
+        first_name = input('>>> ').strip().capitalize()
         if first_name.isalpha():
             break
         time.sleep(0.5)
-        print('~' * 50)
+
         engine.say("First name is required and must contain only alphabetic characters. Please try again.")
         engine.runAndWait()
-        print('First name is required and must contain only alphabetic characters. Please try again.')
-        time.sleep(1)
+        print(f'{brt_red}::First name is required and must contain only alphabetic characters. Please try again.{end} ')
+        time.sleep(4)
+        clear()
+    if re.search('^.*(back|return).*$', first_name, re.IGNORECASE):
+        # If the user types 'back' or 'return', exit the function.
+        clear()
+        return option()
+
     while True:
-        print('~' * 50)
         engine.say("Enter last name.")
         engine.runAndWait()
-        last_name = str(input('Enter last name\n\t>>> ')).capitalize()
+        print(f'{brt_yellow}\nEnter last name:{end} ')
+        print('~~~~~~~~~~~~~~~~~')
+        last_name = input('>>> ').capitalize().strip()
         if last_name.isalpha():
             break
         time.sleep(0.5)
-        print('~' * 50)
+
         engine.say("Last name is required and must contain only alphabetic characters. Please try again.")
         engine.runAndWait()
-        print('Last name is required and must contain only alphabetic characters. Please try again.\033[0m')
-        time.sleep(1)
+        print(f'{brt_red}::Last name is required and must contain only alphabetic characters. Please try again.{end}{bold}{magenta}')
+        time.sleep(3)
+        clear()
 
     # Error handling
     try:
@@ -100,17 +108,16 @@ def register_num():
         _list.append(gen_number())
         details = ' '.join(_list)
         sp_details = details.split(' ')
-        full_name = sp_details[0] +' '+ sp_details[1]
+        full_name = sp_details[0] + ' ' + sp_details[1]
         # print(full_name)
         # print(sp_details)
-        wait_and_count()
+        countdown_timer('Creation of number', 'in', countdown=5)
+        clear()
         time.sleep(1)
-        print()
-        print('~' * 50)
         print()
         engine.say("Registration successful.")
         engine.runAndWait()
-        print_slowly('\033[34;3;1mRegistration successful!')
+        print_slowly(f'{brt_blue}{bold}Registration successful!\n')
         time.sleep(2)
         engine.say(f"Hello!, {full_name} Thank you for registering with us..")
         engine.runAndWait()
@@ -118,165 +125,203 @@ def register_num():
         time.sleep(1)
         engine.say(f'Phone number: {sp_details[-1]}')
         engine.runAndWait()
-        print_slowly(f'Phone number: {sp_details[-1]}\033[0m')
+        print_slowly(f'Phone number: {sp_details[-1]}{end}{bold}{magenta}')
         time.sleep(1)
+        note = f'''
+Thank you for registering with Console Ussd 
+Name: {full_name}
+Phone Number: {sp_details[-1]} 
+'''
+        send_notification('Console ussd sms', note, 'ConsoleSms')
         print()
         engine.say(f'Account has been credited with {airtime_balance}naira\nAccount balance:{airtime_balance}naira')
         engine.runAndWait()
-        print_slowly(f'\033[32;3;1mAccount has been credited with N{airtime_balance}\nAcct.bal:{airtime_balance}\033[0m ')
+        print_slowly(f'{brt_blue}Account has been credited with N{airtime_balance}\nAcct.bal:{airtime_balance} {end}{bold}{magenta} ')
         time.sleep(1)
+        clear()
 
         # Sql insert query
         insert_dt = 'INSERT INTO telecom_tbl(first_name,last_name,phone_number,airtime_balance) VALUES (%s,%s,%s,%s)'
 
         # Execute query with user input
-        my_cur.execute(insert_dt,(first_name,last_name,phone_number,airtime_balance))
+        my_cur.execute(insert_dt, (first_name, last_name, phone_number, airtime_balance))
 
         db.commit()
         my_cur.close()
         db.close()
 
-        print('~' * 50)
-        engine.say("Press 1 to Continue this process.")
-        engine.runAndWait()
-        print('1. Continue')
-        time.sleep(0.7)
-        engine.say("press 2 to Cancel.")
-        engine.runAndWait()
-        print('2. Cancel')
-        time.sleep(0.7)
-        print('~' * 50)
-        opt = input('\t> ')
+        while True:
 
-        if opt == '1':
-            time.sleep(2)
-            print('~' * 50)
-            print()
-            engine.say("Welcome to our service.")
+            engine.say("Press 1 to Continue this process.")
             engine.runAndWait()
-            print_slowly('\033[32;3;1mWelcome to our service\033[0m')
-            time.sleep(1)
-            return ussd_code()
+            time.sleep(0.7)
+            engine.say("press 2 to Cancel.")
+            engine.runAndWait()
+            print(f'{bold}{brt_yellow}1. Continue{end}  {bold}{magenta}|{end}  {bold}{brt_yellow}2. Cancel{end}')
+            print(f'{bold}{magenta}~~~~~~~~~~~     ~~~~~~~~~~{end} {bold}{magenta}')
+            time.sleep(0.7)
+            opt = input('\t>>> ').strip()
 
-        elif opt == '2':
-            print()
-            print()
-            engine.say("Thank you for using our service.")
-            engine.runAndWait()
-            print_slowly('\033[31;1;3mThank you for using our service')
-            time.sleep(1)
+            if opt == '1':
+                time.sleep(2)
+                clear()
+                print()
+                engine.say("Welcome to our service.")
+                engine.runAndWait()
+                print_slowly(f'{brt_black_bg}{brt_yellow}Welcome to our service{end}    {bold}{magenta}')
+                time.sleep(1)
+                ussd_code()
 
-        else:
-            engine.say("Invalid Entry. Service time out.")
-            engine.runAndWait()
-            print('Invalid Entry. Service time out')
+            elif opt == '2':
+                print()
+                engine.say("Thank you for using our service.")
+                engine.runAndWait()
+                print_slowly(f'{brt_yellow}Thank you for using our service{end}')
+                countdown_timer(_register='System logging off in', countdown=5)
+                sys.exit()
+
+            elif re.search('^.*(back|return).*$', opt, re.IGNORECASE):
+                # If the user types 'back' or 'return', exit the function.
+                return option()
+
+            else:
+                engine.say("Invalid Entry. Service time out.")
+                engine.runAndWait()
+                print(f'{brt_red}::Invalid Entry. Service time out{end}{bold}{magenta}')
+                time.sleep(3)
+                clear()
 
     except Exception as e:
-        print('~' * 50)
         engine.say("Sim registration failed:")
         engine.runAndWait()
-        print('Sim registration failed: ',e)
+        print(f'{brt_red}::Sim registration failed: ', e)
 
 
 # Function for if user is already registered
 def already_user():
-    print('~' * 50)
     print()
     engine.say("Enter phone number:")
     engine.runAndWait()
-    phone_number = input('\033[32;1;3mEnter phone number\033[0m\n\t>>> ')
+    print(f'{brt_yellow}Enter phone number: {end} {bold}{magenta}')
+    print('~~~~~~~~~~~~~~~~~~')
+    phone_number = input('>>> ').strip()
 
     try:
         # Query to check if number already exists in db
         check_num = 'SELECT * FROM Telecom_tbl WHERE phone_number = %s'
-        my_cur.execute(check_num,(phone_number))
+        my_cur.execute(check_num, (phone_number))
         user = my_cur.fetchone()
 
         # If user is already in the db the code proceeds to show ussd
         while True:
             if user:
-                wait()
-                print('~' * 50)
+                try:
+                    wait()
+                    check_name = f'SELECT First_name, Last_name FROM Telecom_tbl WHERE phone_number = %s'
+                    my_cur.execute(check_name, (phone_number))
+                    result = my_cur.fetchone()
+                    if result:
+                        # Convert the tuple to a string
+                        f_name, l_name = result
+                        full_name = f"{f_name} {l_name}"
+                        # name = (f"Full Name: {full_name}")
+                        note = f'''
+Hello {full_name} thank you for choosing console ussd.
+Get data for price as low as N25 
+                        '''
+                        send_notification('Console login sms', note, 'ConsoleLogSms')
+                    else:
+                        print("No user found with that phone number.")
+                finally:
+                    # Close the connection
+                    my_cur.close()
                 print()
                 engine.say("press 1 to Continue this process")
                 engine.runAndWait()
-                print_slowly('1. Continue')
                 engine.say("press 2 to cancel this process")
                 engine.runAndWait()
-                print_slowly('2. Cancel')
-                print('~' * 50)
-                res = input('\t>>> ')
+                print(f'{bold}{brt_yellow}1. Continue{end}  {bold}{magenta}|{end}  {bold}{brt_yellow}2. Cancel{end} {bold}{magenta}')
+                print(f'{bold}{magenta}~~~~~~~~~~~     ~~~~~~~~~~{end} {bold}{magenta}')
+                res = input(f'\t>>> ').strip()
                 if res == '1' and res.isnumeric():
-                    wait_and_count()
-                    print('~' * 50)
+                    wait()
                     engine.say("Welcome to our service")
                     engine.runAndWait()
-                    print('Welcome to our service')
-                    wait()
+                    print(f'\n\t{brt_black_bg}{brt_green}Welcome to our service{end}   {bold}{magenta}')
                     ussd_code()
                     break
 
                 elif res == '2' and res.isnumeric():
+                    clear()
                     print()
-                    print('~' * 50)
                     engine.say("Thank you for using our service")
                     engine.runAndWait()
-                    print('Thank you for using our service')
+                    print_slowly(f'{brt_black_bg}{brt_yellow}Thank you for using our service{end}')
+                    countdown_timer(_register='System logging off in', countdown=5)
                     break
+
+                elif re.search('^.*(back|return).*$', res, re.IGNORECASE):
+                    # If the user types 'back' or 'return', exit the function.
+                    option()
 
                 else:
                     print()
-                    print('~' * 50)
                     engine.say("invalid response. Please try again.")
                     engine.runAndWait()
-                    print('Invalid response. Please try again')
-                    time.sleep(0.5)
-                    engine.say("Service time out")
-                    engine.runAndWait()
-                    print('Service time out')
+                    print(f'{brt_red}::Invalid response. Please try again{end} {bold}{magenta}')
+                    time.sleep(3)
+                    clear()
 
             else:
                 print()
-                print('~' * 50)
-                engine.say("invalid number. Please register your number to continue this process")
+                engine.say("invalid number. Please enter a valid number to continue this process")
                 engine.runAndWait()
-                print('Invalid number\nPlease register your number to continue this process')
-                break
+                print(f'{brt_red}::Invalid number\nPlease enter a valid number to continue this process')
+                time.sleep(5)
+                clear()
+                already_user()
 
     except Exception as e:
-        print('~' * 50)
         engine.say("An error occurred")
         engine.runAndWait()
-        print(f"An error occurred: {e}")
+        print(f"{brt_red}An error occurred: {e}")
+        time.sleep(5)
+        clear()
+        option()
 
 
 # Function to ask a user if they already have their number registered to the db or not
 def option():
     engine.say("Welcome to our service")
     engine.runAndWait()
-    print()
-    print_slowly('\t\t\033[31;107;3;1mWelcome to our service\033[0m')
-    time.sleep(0.3)
-    print()
-    engine.say("Would you like to: ")
-    engine.runAndWait()
-    print_slowly('\033[31;3;1mWould you like to:')
-    time.sleep(0.3)
-    print()
-    engine.say("1. Register number")
-    engine.runAndWait()
-    print_slowly('1. Register number')
-    time.sleep(0.3)
-    engine.say("2. User")
-    engine.runAndWait()
-    print_slowly('2. User\033[0m')
 
     while True:
-        print('~' * 50)
-        opt = input('\t>>> ')
+        print()
+        print_slowly(f'\t\t{brt_black_bg}{brt_green}{bold}{italic}Welcome to our service{end}   {bold}{magenta}\n')
+        time.sleep(0.3)
+
+        engine.say("Would you like to: ")
+        engine.runAndWait()
+
+        print_slowly(f'{brt_yellow}Would you like to:{end}        {magenta}')
+        print('~~~~~~~~~~~~~~~~~~')
+        time.sleep(0.3)
+
+        engine.say("1. Register number")
+        engine.runAndWait()
+
+        engine.say("2. User")
+        engine.runAndWait()
+
+        print(end='\n')
+        print(bold, magenta, "+~~~~~~~~~~~~~~~~~~~~~~~~~~~+~~~~~~~~~~~~~~~~~~~~~~~~~+"
+              , sep='')
+        print(f"|      {brt_black_bg}{brt_yellow}1. REGISTER NUMBER{end}   {bold}{magenta}|     "
+              f"{brt_black_bg}{brt_yellow}2. USER{end}     {bold}{magenta}        |        ")
+        print("+~~~~~~~~~~~~~~~~~~~~~~~~~~~+~~~~~~~~~~~~~~~~~~~~~~~~~+")
+        opt = input('\t>>> ').strip()
         if opt == '1' and opt.isnumeric():
             wait()
-            time.sleep(1)
             register_num()
             break
 
@@ -287,9 +332,11 @@ def option():
 
         else:
             time.sleep(1)
-            print('~' * 50)
-            print('\033[1mInvalid Response. Please try again')
-            time.sleep(0.5)
+            print(f'{brt_red}::Invalid Response. Please try again{end}')
+            time.sleep(3)
+            clear()
 
 
-option()
+clear()
+
+# option()

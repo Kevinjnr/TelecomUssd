@@ -1,4 +1,4 @@
-with open('../README.md', 'w') as fh:
+with open('README.md', 'w') as fh:
     fh.write('''\t\t\tTELECOM SERVICE SIMULATION
     
 This Python script simulates a simple telecom service where users can register their phone numbers, recharge their airtime balance, 
@@ -27,14 +27,25 @@ Features
 5. User Interaction:
     - Users interact with the service through a simple menu system.
     - The script uses functions to display messages slowly for a better user experience.
+
+6. USSD Menu: 
+    -Access various services through a simulated USSD menu.
     
+7. Text-to-Speech:
+    -Uses `pyttsx3` to provide auditory feedback to users.
+    
+8. Database Integration:
+    -Stores user details and airtime balance in a MySQL database.
+    
+9. Notifications:
+    -Sends notifications (simulated).    
     
 Setup
 
 Prerequisites
 - Python 3.x
 - MySQL Server
-- Required Python packages: pymysql, random, time,datetime,os,sys,decimal,pyttsx3
+- Required Python packages: pymysql, random, time,datetime,os,sys,decimal,pyttsx3,plyer
     
 Installation
 1. Clone the repository or download the script file.
@@ -64,7 +75,11 @@ Usage
 2. Follow the on-screen prompts to register a new number or verify an existing one.
 3. Enter your details as requested to complete the registration or access the service.
 
-Code Overview
+Code Structure
+- main.py: Entry point of the application.
+- TelecomProject/: Contains the main menu, USSD shortcodes, and other functionalities.
+- animation/colors.py: Contains color codes and animations for the console output.
+- notification.py: Simulates sending notifications.
 
 
 Main Functions
@@ -79,6 +94,10 @@ Main Functions
 Error Handling
 
 The script includes basic error handling to manage invalid inputs and database connection issues.
+
+Contributing
+
+Feel free to submit pull requests and report issues. Contributions are welcome!
 
 Conclusion
  
